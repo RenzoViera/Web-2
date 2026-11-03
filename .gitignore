@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+
+# Builds y cobertura
+dist/
+build/
+coverage/
+
+# Entorno (nunca commitear secretos)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Plan local de cada integrante (no versionado)
+AGENTS.md
