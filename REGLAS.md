@@ -9,7 +9,7 @@
 
 ## A. Generales
 
-- Stack, estructura y convenciones fijas: Express 5 + JS ESM, Sequelize + PostgreSQL 16, Zod, React + Vite + Tailwind v4, React Router v7, Context API, axios, React Hook Form. No agregar librerías sin anotarlo en las notas del paso.
+- Stack, estructura y convenciones fijas: Express 5 + JS ESM, Sequelize + PostgreSQL 16, Zod, React + Vite + Tailwind v4, React Router 8 (`react-router`), Context API, axios, React Hook Form. No agregar librerías sin anotarlo en las notas del paso.
 - Conventional Commits (`feat(api): …`, `feat(web): …`, `fix(…)`, `chore(docker): …`, `docs: …`), commits pequeños, todo entra a `main` por PR.
 - Nunca commitear `.env` ni secretos. Nunca hardcodear URLs (`VITE_API_URL`) ni credenciales.
 - Sin `console.log` de debug, código comentado ni dead code.
@@ -41,7 +41,7 @@
 8. Sin estilos inline; solo clases Tailwind con los tokens de `src/index.css` (`bg-primary`, `text-fg-muted`, `border-border`…). Nada de colores hex sueltos en componentes (excepciones: 36).
 9. Sin logs de debug, código comentado ni dead code.
 10. Responsive mobile-first; todo debe funcionar a 375 px.
-11. Nada de `alert`/`confirm`/`prompt`: usar `useToast()` y un `ConfirmDialog`/`Modal` propio en `components/ui/` (crearlo una sola vez cuando se necesite).
+11. Nada de `alert`/`confirm`/`prompt`: toasts (`useToast`) y `ConfirmDialog`/`Modal` propios en `components/ui/` — pendientes: crearlos una sola vez en el primer paso que los necesite.
 12. Nada de `type="date"`/`datetime-local`: selector de fecha propio si hiciera falta.
 13. Componentes con variantes (botones, badges, tabs, pills…): una implementación con prop `variant`/`size`; no duplicar.
 14. Requests mínimos por acción. Prohibido "ejecutar → recargarTodo". Acción chica (tildar, editar campo, reordenar): actualizar solo ese recurso (respuesta del POST/PATCH o refetch de ese endpoint). Recarga total solo si cambian varios recursos.
@@ -54,7 +54,7 @@
 21. Key estable y única en listas (id, no índice).
 22. Imports puntuales (tree-shaking); no importar librerías enteras por una función/ícono. Íconos: SVG propios en `components/icons/`.
 23. Páginas con `React.lazy` (code splitting); `loading="lazy"` en imágenes fuera del primer viewport.
-24. Toda promesa con manejo de error; mostrarlo con `useToast()` o el estado de error de la vista (`ErrorMessage`).
+24. Toda promesa con manejo de error; mostrarlo con toast o con el estado de error de la vista (`ErrorMessage`).
 25. Tablas/listados: sin scroll horizontal en móvil; cada fila → card reutilizable (encabezados como etiquetas). Controles de ancho fijo en filtros: wrap y 100 % de ancho en móvil.
 26. Implementación grande (módulo, flujo, varias pantallas): dudas de alcance/flujo/diseño/datos → preguntar todo en una sola ronda antes; no suponer nada importante. Plan aprobado → ejecutar de punta a punta.
 27. Pantalla con secciones independientes: cada una se muestra al responder (estado + skeleton por sección); nunca bloquear todo con una promesa agregada; si una falla muestra su error sin tumbar las demás.
@@ -69,4 +69,4 @@
 36. Animaciones solo funcionales y cortas (120–300 ms): entrada de página, modales, desplegables, toasts, ítem activo. Nada decorativo en bucle, sin brillos/glow. Se hacen con las animaciones de `src/index.css` (tokens `--animate-*`) y variantes `motion-reduce:`; `prefers-reduced-motion` ya está cubierto globalmente. Únicas excepciones a inline: posiciones calculadas en runtime (tooltips/popovers), como vars CSS (`--x`, `--y`) consumidas por clases.
 37. Desplegables/selects: diseño propio, nunca nativo (`<select>`/`<option>`/`<datalist>`). Una implementación (`components/ui/Select`) con variantes por prop, teclado (flechas, Inicio/Fin, Enter/Espacio, Esc, búsqueda por tipeo), ARIA combobox/listbox, cierre por clic afuera/Esc/blur (`hooks/useDismiss`), lista en portal que abre hacia arriba si no entra.
 38. Scroll fluido en listas largas con scroll propio: scroller con fondo opaco; hover off durante scroll (`data-desplazando` vía DOM, sin state); header sticky al `thead` entero; listeners de scroll pasivos, sin setState por evento.
-39. Validación de inputs: usar `hooks/useAppForm` (React Hook Form preconfigurado): valida al salir (blur), nunca mientras se escribe; un campo con error se revalida al escribir solo para limpiarlo; el submit valida todo y enfoca el primer inválido. Errores de la API → `setApiErrors(error)`. El campo (`components/ui/Input`) muestra el error debajo con `aria-invalid` + `aria-describedby`.
+39. Validación de inputs: un único hook `hooks/useAppForm` sobre React Hook Form (pendiente, paso 03): valida al salir (blur), nunca mientras se escribe; un campo con error se revalida al escribir solo para limpiarlo; el submit valida todo y enfoca el primer inválido. Errores de la API → `setApiErrors(error)`. El campo (`components/ui/Input`) muestra el error debajo con `aria-invalid` + `aria-describedby`.
