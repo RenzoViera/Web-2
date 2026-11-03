@@ -14,7 +14,7 @@ export const useCopyToClipboard = () => {
   const copy = useCallback(async (/** @type {string} */ text) => {
     clearTimeout(timer.current);
     try {
-      // navigator.clipboard solo existe en contextos seguros (https o localhost).
+      // navigator.clipboard solo existe en contextos seguros (HTTPS o equipo local).
       if (!navigator.clipboard) throw new Error('Portapapeles no disponible');
       await navigator.clipboard.writeText(text);
       setStatus('copied');

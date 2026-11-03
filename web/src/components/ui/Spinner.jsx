@@ -25,9 +25,9 @@ export function Spinner({ size = 'md', label = 'Cargando…', decorative = false
   if (decorative) return <span className={cn('inline-flex', className)}>{svg}</span>;
 
   return (
-    <span role="status" className={cn('inline-flex items-center justify-center text-primary', className)}>
+    <output className={cn('inline-flex items-center justify-center text-primary', className)}>
       {svg}
       <span className="sr-only">{label}</span>
-    </span>
+    </output>
   );
 }
