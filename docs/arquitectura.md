@@ -21,9 +21,11 @@
 │  ├─ docs/openapi.yaml especificación OpenAPI servida en /api/docs
 │  └─ Dockerfile
 ├─ web/                 SPA (React 19 + Vite 8 + Tailwind v4)
-│  └─ src/              api/, config/, services/, context/, hooks/, routes/, components/, pages/, utils/
+│  ├─ src/              api/, config/, services/, context/, hooks/, routes/, components/, pages/, utils/
+│  ├─ nginx.conf        configuración de Nginx para SPA
+│  └─ Dockerfile        build multi-etapa Vite → Nginx
 ├─ docs/                esta documentación
-├─ docker-compose.yml   db + api (web se agrega en el paso 02)
+├─ docker-compose.yml   db + api + web (completo)
 ├─ .env.example         plantilla de variables (un solo .env en la raíz)
 ├─ REGLAS.md            reglas de desarrollo obligatorias
 └─ README.md

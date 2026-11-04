@@ -11,10 +11,9 @@ docker compose up --build
 |---|---|---|---|
 | `db` | `postgres:16-alpine` | `5432` | Volumen `db_data`; healthcheck `pg_isready`. |
 | `api` | build de `api/Dockerfile` | `3000` | Espera a que `db` esté healthy; `env_file: .env` con `DB_HOST=db` forzado; healthcheck contra `/api/health`; `init: true` para apagado limpio. |
-| `web` | — | `8080` | ⏳ Pendiente (paso 02): Dockerfile multi-etapa Vite → Nginx. Usar `node:24` en la etapa de build. |
+| `web` | build de `web/Dockerfile` | `8080` | Build multi-etapa (Vite en Node 24 → Nginx Alpine). Expuesto en puerto 8080. |
 
-`api/Dockerfile`: multi-etapa sobre `node:24-bookworm-slim`; la etapa `deps` instala solo dependencias de producción (`npm ci --omit=dev`, capa cacheada mientras no cambie el lockfile) y la imagen final corre como usuario `node` (no root).
-Pendiente (paso 02): el comando de arranque del contenedor pasa a `migrate && seed && start`.
+`api/Dockerfile`: multi-etapa sobre `node:24-bookworm-slim`; la etapa `deps` instala solo dependencias de producción (`npm ci --omit=dev`, capa cacheada mientras no cambie el lockfile) y la imagen final corre como usuario `node` (no root). El comando de arranque corre automáticamente las migraciones y seeders antes de iniciar la API (`npm run migrate && npm run seed && npm start`).
 
 Comandos útiles:
 
