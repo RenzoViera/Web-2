@@ -1,0 +1,207 @@
+openapi: 3.0.3
+info:
+  title: MiniAula API
+  version: 0.1.0
+  description: |
+    API REST de MiniAula (Proyecto final Ingeniería Web 2).
+
+    - Todas las respuestas son JSON.
+    - Errores con formato único: `{ "error": { "code", "message", "details" } }`.
+    - Listados paginados: `{ "data": [...], "meta": { "page", "limit", "total", "totalPages" } }`.
+    - Cada respuesta incluye el header `X-Request-Id` para rastrear la solicitud en los logs.
+
+    Los endpoints de dominio (auth, cursos, lecciones, etc.) se agregan en cada paso;
+    ver `docs/api/endpoints.md` en el repositorio para el estado de cada uno.
+servers:
+  - url: /api
+    description: Mismo origen que esta documentación
+tags:
+  - name: Sistema
+    description: Estado del servicio
+paths:
+  /health:
+    get:
+      tags: [Sistema]
+      summary: Estado de la API y de la conexión a la base de datos
+      operationId: getHealth
+      responses:
+        '200':
+          description: API y base de datos operativas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: ok
+                database: up
+                uptime: 42
+                timestamp: '2026-11-03T12:00:00.000Z'
+        '503':
+          description: API operativa pero sin conexión a la base de datos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: degraded
+                database: down
+                uptime: 42
+                timestamp: '2026-11-03T12:00:00.000Z'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  headers:
+    XRequestId:
+      description: Identificador único de la solicitud
+      schema:
+        type: string
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    PageQuery:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    LimitQuery:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 9
+  schemas:
+    Health:
+      type: object
+      required: [status, database, uptime, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        database:
+          type: string
+          enum: [up, down]
+        uptime:
+          type: integer
+          description: Segundos desde que arrancó el proceso
+        timestamp:
+          type: string
+          format: date-time
+    ErrorDetail:
+      type: object
+      properties:
+        location:
+          type: string
+          enum: [params, query, body]
+        field:
+          type: string
+          nullable: true
+        message:
+          type: string
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details]
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Los datos enviados no son válidos
+            details:
+              type: array
+              nullable: true
+              items:
+                $ref: '#/components/schemas/ErrorDetail'
+    PaginationMeta:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 9
+        total:
+          type: integer
+          example: 23
+        totalPages:
+          type: integer
+          example: 3
+  responses:
+    BadRequest:
+      description: JSON mal formado o parámetros/query inválidos
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Parámetros de la solicitud inválidos
+              details:
+                - location: query
+                  field: limit
+                  message: Too big
+    Unauthorized:
+      description: Sin token, token inválido/expirado o credenciales incorrectas
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Rol incorrecto o sin permiso sobre el recurso
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Recurso o ruta inexistente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: ROUTE_NOT_FOUND
+              message: Ruta GET /api/noexiste no encontrada
+              details: null
+    Conflict:
+      description: Conflicto con el estado actual (duplicado, dependencias)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: Falla de validación o regla de negocio
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Error no controlado (sin stack en la respuesta)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: Error interno del servidor
+              details: null
