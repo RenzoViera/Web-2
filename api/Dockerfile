@@ -14,4 +14,4 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --chown=node:node . .
 USER node
 EXPOSE 3000
-CMD ["node", "src/server.js"]
+CMD ["sh", "-c", "npm run migrate && npm run seed && npm start"]
