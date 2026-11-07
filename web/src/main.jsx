@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from '@/components/errors/ErrorBoundary';
 import { GlobalErrorListener } from '@/components/errors/GlobalErrorListener';
+import { AuthProvider } from '@/context/AuthProvider';
+import { ToastProvider } from '@/context/ToastProvider';
 import { AppRouter } from '@/routes/AppRouter';
 import './index.css';
 
@@ -12,7 +14,11 @@ createRoot(rootElement).render(
   <StrictMode>
     <ErrorBoundary>
       <GlobalErrorListener />
-      <AppRouter />
+      <ToastProvider>
+        <AuthProvider>
+          <AppRouter />
+        </AuthProvider>
+      </ToastProvider>
     </ErrorBoundary>
   </StrictMode>,
 );
