@@ -26,6 +26,10 @@ tags:
       **Cerrar sesión:** la API es stateless; el cliente borra su token (no hay endpoint de logout).
   - name: Usuarios
     description: Perfil del usuario autenticado
+  - name: Cursos
+    description: Catálogo público y gestión de cursos
+  - name: Instructor
+    description: Gestión de cursos y contenidos para instructores
 paths:
   /health:
     get:
@@ -229,6 +233,237 @@ paths:
                   timestamp: '2026-11-07T12:00:00.000Z'
         '500':
           $ref: '#/components/responses/InternalError'
+  /cursos:
+    get:
+      tags: [Cursos]
+      summary: Catálogo público de cursos publicados
+      operationId: getCursosCatalogo
+      parameters:
+        - name: q
+          in: query
+          description: Búsqueda por texto en título (case-insensitive)
+          schema:
+            type: string
+        - name: categoria
+          in: query
+          description: Filtro exacto por categoría
+          schema:
+            type: string
+        - name: nivel
+          in: query
+          schema:
+            $ref: '#/components/schemas/NivelCurso'
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          description: Listado paginado de cursos publicados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCursosResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Cursos]
+      summary: Crear un nuevo curso (solo instructor, nace en estado borrador)
+      operationId: createCurso
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCursoRequest'
+      responses:
+        '201':
+          description: Curso creado exitosamente en estado borrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Curso'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /cursos/{id}:
+    get:
+      tags: [Cursos]
+      summary: Detalle público de un curso publicado con temario resumido
+      operationId: getCursoDetallePublico
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Detalle del curso y lista de lecciones sin contenido sensible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursoPublicoDetalle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Cursos]
+      summary: Actualizar curso (solo instructor dueño)
+      operationId: updateCurso
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCursoRequest'
+      responses:
+        '200':
+          description: Curso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Curso'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Cursos]
+      summary: Eliminar curso (solo instructor dueño, 409 si tiene estudiantes inscritos)
+      operationId: deleteCurso
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Curso eliminado exitosamente
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: El curso no puede eliminarse porque tiene inscritos (COURSE_HAS_STUDENTS)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /cursos/{id}/estado:
+    patch:
+      tags: [Cursos]
+      summary: Cambiar estado del curso (solo instructor dueño; 422 si se publica sin lecciones)
+      operationId: changeCursoEstado
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeEstadoRequest'
+      responses:
+        '200':
+          description: Estado del curso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Curso'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Error al publicar (p. ej. el curso no tiene lecciones)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /instructor/cursos:
+    get:
+      tags: [Instructor]
+      summary: Listar mis cursos como instructor con conteo de lecciones e inscritos
+      operationId: getInstructorCursos
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          description: Listado paginado de cursos del instructor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInstructorCursosResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /instructor/cursos/{id}:
+    get:
+      tags: [Instructor]
+      summary: Detalle completo del curso para edición (con lecciones y preguntas con respuestas correctas)
+      operationId: getInstructorCursoDetalle
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Detalle del curso para el editor del instructor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstructorCursoDetalle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     bearerAuth:
@@ -424,6 +659,263 @@ components:
         totalPages:
           type: integer
           example: 3
+    NivelCurso:
+      type: string
+      enum: [principiante, intermedio, avanzado]
+    EstadoCurso:
+      type: string
+      enum: [borrador, publicado, archivado]
+    Curso:
+      type: object
+      required: [id, instructorId, titulo, categoria, nivel, estado, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+          example: 1
+        instructorId:
+          type: integer
+          example: 2
+        titulo:
+          type: string
+          example: Desarrollo Web con Node.js y Express
+        descripcion:
+          type: string
+          nullable: true
+          example: Aprende a construir APIs REST seguras y escalables desde cero.
+        categoria:
+          type: string
+          example: Programación
+        nivel:
+          $ref: '#/components/schemas/NivelCurso'
+        estado:
+          $ref: '#/components/schemas/EstadoCurso'
+        imagenUrl:
+          type: string
+          nullable: true
+          format: uri
+          example: https://images.unsplash.com/photo-1517694712202-14dd9538aa97
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateCursoRequest:
+      type: object
+      required: [titulo, categoria, nivel]
+      properties:
+        titulo:
+          type: string
+          minLength: 3
+          maxLength: 200
+          example: Introducción a Docker
+        descripcion:
+          type: string
+          maxLength: 5000
+          nullable: true
+          example: Contenedores paso a paso.
+        categoria:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: DevOps
+        nivel:
+          $ref: '#/components/schemas/NivelCurso'
+        imagenUrl:
+          type: string
+          format: uri
+          nullable: true
+    UpdateCursoRequest:
+      type: object
+      minProperties: 1
+      properties:
+        titulo:
+          type: string
+          minLength: 3
+          maxLength: 200
+        descripcion:
+          type: string
+          maxLength: 5000
+          nullable: true
+        categoria:
+          type: string
+          minLength: 2
+          maxLength: 100
+        nivel:
+          $ref: '#/components/schemas/NivelCurso'
+        imagenUrl:
+          type: string
+          format: uri
+          nullable: true
+    ChangeEstadoRequest:
+      type: object
+      required: [estado]
+      properties:
+        estado:
+          $ref: '#/components/schemas/EstadoCurso'
+    CursoPublicoListado:
+      type: object
+      required: [id, instructorId, titulo, categoria, nivel, estado, totalLecciones, instructor, createdAt]
+      properties:
+        id:
+          type: integer
+        instructorId:
+          type: integer
+        titulo:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        categoria:
+          type: string
+        nivel:
+          $ref: '#/components/schemas/NivelCurso'
+        estado:
+          $ref: '#/components/schemas/EstadoCurso'
+        imagenUrl:
+          type: string
+          nullable: true
+        totalLecciones:
+          type: integer
+          example: 5
+        instructor:
+          type: object
+          required: [id, nombre]
+          properties:
+            id:
+              type: integer
+            nombre:
+              type: string
+        createdAt:
+          type: string
+          format: date-time
+    CursoPublicoDetalle:
+      type: object
+      required: [id, instructorId, titulo, categoria, nivel, estado, instructor, lecciones, createdAt]
+      properties:
+        id:
+          type: integer
+        instructorId:
+          type: integer
+        titulo:
+          type: string
+        descripcion:
+          type: string
+          nullable: true
+        categoria:
+          type: string
+        nivel:
+          $ref: '#/components/schemas/NivelCurso'
+        estado:
+          $ref: '#/components/schemas/EstadoCurso'
+        imagenUrl:
+          type: string
+          nullable: true
+        instructor:
+          type: object
+          required: [id, nombre]
+          properties:
+            id:
+              type: integer
+            nombre:
+              type: string
+        lecciones:
+          type: array
+          items:
+            type: object
+            required: [id, titulo, tipo, orden]
+            properties:
+              id:
+                type: integer
+              titulo:
+                type: string
+              tipo:
+                type: string
+                enum: [contenido, cuestionario]
+              orden:
+                type: integer
+        createdAt:
+          type: string
+          format: date-time
+    InstructorCursoItem:
+      allOf:
+        - $ref: '#/components/schemas/Curso'
+        - type: object
+          required: [totalLecciones, totalInscritos]
+          properties:
+            totalLecciones:
+              type: integer
+              example: 5
+            totalInscritos:
+              type: integer
+              example: 12
+    InstructorCursoDetalle:
+      allOf:
+        - $ref: '#/components/schemas/Curso'
+        - type: object
+          required: [lecciones]
+          properties:
+            lecciones:
+              type: array
+              items:
+                type: object
+                required: [id, cursoId, titulo, tipo, orden]
+                properties:
+                  id:
+                    type: integer
+                  cursoId:
+                    type: integer
+                  titulo:
+                    type: string
+                  contenido:
+                    type: string
+                    nullable: true
+                  tipo:
+                    type: string
+                    enum: [contenido, cuestionario]
+                  orden:
+                    type: integer
+                  preguntas:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, leccionId, enunciado, opciones, indiceCorrecto]
+                      properties:
+                        id:
+                          type: integer
+                        leccionId:
+                          type: integer
+                        enunciado:
+                          type: string
+                        opciones:
+                          type: array
+                          items:
+                            type: string
+                        indiceCorrecto:
+                          type: integer
+                        explicacion:
+                          type: string
+                          nullable: true
+    PaginatedCursosResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CursoPublicoListado'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    PaginatedInstructorCursosResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstructorCursoItem'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
   responses:
     BadRequest:
       description: JSON mal formado o parámetros/query inválidos

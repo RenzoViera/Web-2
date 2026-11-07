@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { authRoutes } from './auth.routes.js';
+import { cursoRoutes } from './curso.routes.js';
 import { docsRoutes } from './docs.routes.js';
 import { healthRoutes } from './health.routes.js';
+import { instructorRoutes } from './instructor.routes.js';
 import { usuarioRoutes } from './usuario.routes.js';
 
 // Punto único de montaje de rutas bajo /api. Cada dominio agrega aquí su router.
@@ -11,3 +13,5 @@ apiRoutes.use('/health', healthRoutes);
 apiRoutes.use('/docs', docsRoutes);
 apiRoutes.use('/auth', authRoutes);
 apiRoutes.use('/users', usuarioRoutes);
+apiRoutes.use('/cursos', cursoRoutes);
+apiRoutes.use('/instructor', instructorRoutes);

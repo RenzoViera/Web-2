@@ -26,14 +26,14 @@ Cerrar sesión: stateless, el cliente borra el token (no hay endpoint).
 
 | Método | Ruta | Acceso | Descripción | Estado |
 |---|---|---|---|---|
-| GET | `/cursos` | Público | Catálogo publicado con `q`, `categoria`, `page`, `limit` | ⏳ Paso 04 |
-| GET | `/cursos/:id` | Público (auth opcional) | Detalle + temario sin contenido (+ `inscrito` en paso 06) | ⏳ Paso 04 / 06 |
-| POST | `/cursos` | Instructor | Crear curso (siempre `borrador`) | ⏳ Paso 04 |
-| PUT | `/cursos/:id` | Instructor dueño | Editar curso | ⏳ Paso 04 |
-| DELETE | `/cursos/:id` | Instructor dueño | Eliminar (409 con inscritos) | ⏳ Paso 04 |
-| PATCH | `/cursos/:id/estado` | Instructor dueño | Publicar/archivar (422 sin lecciones) | ⏳ Paso 04 |
-| GET | `/instructor/cursos` | Instructor | Mis cursos con conteos | ⏳ Paso 04 |
-| GET | `/instructor/cursos/:id` | Instructor dueño | Curso para el editor (con `indiceCorrecto`) | ⏳ Paso 04 |
+| GET | `/cursos` | Público | Catálogo publicado con `q`, `categoria`, `nivel`, `page`, `limit` | ✅ Paso 04 |
+| GET | `/cursos/:id` | Público (auth opcional) | Detalle + temario sin contenido (+ `inscrito` en paso 06) | ✅ Paso 04 (base) / ⏳ 06 |
+| POST | `/cursos` | Instructor | Crear curso (siempre `borrador`) | ✅ Paso 04 |
+| PUT | `/cursos/:id` | Instructor dueño | Editar curso (al menos un campo) | ✅ Paso 04 |
+| DELETE | `/cursos/:id` | Instructor dueño | Eliminar (409 `COURSE_HAS_STUDENTS` con inscritos) | ✅ Paso 04 |
+| PATCH | `/cursos/:id/estado` | Instructor dueño | Publicar/archivar (422 `COURSE_CANNOT_PUBLISH_EMPTY` sin lecciones) | ✅ Paso 04 |
+| GET | `/instructor/cursos` | Instructor | Mis cursos con conteo de lecciones e inscritos (paginado) | ✅ Paso 04 |
+| GET | `/instructor/cursos/:id` | Instructor dueño | Curso para el editor (con `indiceCorrecto`) | ✅ Paso 04 |
 | GET | `/instructor/cursos/:id/resumen` | Instructor dueño | Panel de métricas | ⏳ Paso 09 |
 
 ## Lecciones y preguntas

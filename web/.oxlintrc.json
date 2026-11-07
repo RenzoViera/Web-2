@@ -9,6 +9,7 @@
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
     "no-console": "error",
     "no-alert": "error",
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "jsx-a11y/prefer-tag-over-role": "off"
   }
 }
