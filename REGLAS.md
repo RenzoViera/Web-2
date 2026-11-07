@@ -4,7 +4,7 @@
 > Complementan el plan de pasos (`AGENTS.md`, local de cada integrante). Ante conflicto, manda este archivo en
 > lo que respecta a **cómo** se escribe el código; el plan manda en **qué** se hace en cada paso.
 > La numeración de backend y frontend es fija (hay referencias cruzadas): no renumerar, solo agregar al final.
-> §B incorpora la skill `backend-rules-general` y §C la skill `frontend-rules`, adaptadas a este stack.
+> §B incorpora la skill `backend-rules-general` y §C la skill `frontend-rules-general`, adaptadas a este stack.
 
 ---
 
@@ -103,3 +103,4 @@
 37. Desplegables/selects: diseño propio, nunca nativo (`<select>`/`<option>`/`<datalist>`). Una implementación (`components/ui/Select`) con variantes por prop, teclado (flechas, Inicio/Fin, Enter/Espacio, Esc, búsqueda por tipeo), ARIA combobox/listbox, cierre por clic afuera/Esc/blur (`hooks/useDismiss`), lista en portal que abre hacia arriba si no entra.
 38. Scroll fluido en listas largas con scroll propio: scroller con fondo opaco; hover off durante scroll (`data-desplazando` vía DOM, sin state); header sticky al `thead` entero; listeners de scroll pasivos, sin setState por evento.
 39. Validación de inputs: un único hook `hooks/useAppForm` sobre React Hook Form, con reglas de `utils/validation.js`: valida al salir (blur), nunca mientras se escribe; un campo con error se revalida al escribir solo para limpiarlo; el submit valida todo y enfoca el primer inválido. Errores de la API: `submit(fn)` los aplica solo (o `setApiErrors(error)`): por campo si traen `details`, si no en `formError`; los 5xx van al manejador global. El campo (`components/ui/Input`) muestra el error debajo con `aria-invalid` + `aria-describedby`.
+40. Ver detalle / editar desde un listado: en registros simples (p. ej. una pregunta de un cuestionario) abrir un modal sobre el listado, sin cambiar de vista; el listado queda detrás con sus filtros y página. El modal tiene URL propia (ruta hija `…/:id` que renderiza el mismo listado + el modal; el listado pone `<Outlet />`) para compartir o recargar; cerrar vuelve a la pantalla anterior (o al listado si se entró directo). Lo que tiene flujo propio o el plan define como página (detalle de curso del catálogo, editor de curso, editor de lección, vista de lección, panel) sigue como página. Contenido del modal lazy y pedido al abrirlo (29). Un solo componente compartido (`components/ui/Modal`, ver 11), no por pantalla.

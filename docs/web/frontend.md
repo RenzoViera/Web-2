@@ -158,7 +158,7 @@ Los errores esperados (validación, 4xx de negocio) **no** usan este aviso: se m
 
 ## Pendientes de frontend para próximos pasos
 
-- `ConfirmDialog`/`Modal` propios (`REGLAS.md` C.11): crearlos en el primer paso que los necesite (paso 04: eliminar curso).
+- `ConfirmDialog`/`Modal` propios (`REGLAS.md` C.11): crearlos en el primer paso que los necesite (paso 04: eliminar curso). El `Modal` también sirve para ver o editar registros simples desde un listado, con URL propia (C.40; p. ej. las preguntas del paso 05).
 - Select propio accesible (`REGLAS.md` C.37) para categoría y nivel (paso 04). El rol no lo usa: se elige con `RadioCardGroup`.
 - Variantes de `Badge` para el estado del curso (paso 04), con contraste AA.
 - Reemplazar `ComingSoonPage` por las páginas reales: cursos del instructor (paso 04), catálogo y mis cursos (paso 06).
