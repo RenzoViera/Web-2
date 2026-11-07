@@ -17,7 +17,11 @@ export const axiosClient = axios.create({
 /** @param {unknown} error */
 export const isRequestCanceled = (error) => axios.isCancel(error);
 
-/** @param {import('axios').AxiosError<{ error?: { code?: string, message?: string, details?: [] | null } }>} error */
+/**
+ * @param {import('axios').AxiosError<{
+ *   error?: { code?: string, message?: string, details?: [] | null, requestId?: string },
+ * }>} error
+ */
 const toApiError = (error) => {
   const { response } = error;
 
@@ -37,7 +41,7 @@ const toApiError = (error) => {
     code: body?.code ?? 'UNKNOWN_ERROR',
     message: body?.message ?? UNKNOWN_ERROR_MESSAGE,
     details: body?.details ?? null,
-    requestId: response.headers?.['x-request-id'] ?? null,
+    requestId: body?.requestId ?? response.headers?.['x-request-id'] ?? null,
     cause: error,
   });
 };

@@ -26,7 +26,7 @@ Vite lee el `.env` de la raíz (`envDir: '..'`) y solo expone las variables `VIT
 ## Cliente HTTP (`api/axiosClient.js`)
 
 - `baseURL = VITE_API_URL`, timeout 15 s.
-- Interceptor de respuesta: convierte cualquier error en `ApiError { status, code, message, details, requestId }` leyendo el formato `{ error: { code, message, details } }` y el header `X-Request-Id`. Sin respuesta → `NETWORK_ERROR` o `TIMEOUT` con mensaje en español.
+- Interceptor de respuesta: convierte cualquier error en `ApiError { status, code, message, details, requestId }` leyendo el formato `{ error: { status, code, message, details, requestId, timestamp } }` (el `requestId` sale del cuerpo y, si falta, del header `X-Request-Id`). Sin respuesta → `NETWORK_ERROR` o `TIMEOUT` con mensaje en español.
 - Las cancelaciones (`AbortController`) se propagan tal cual; `isRequestCanceled(error)` las detecta.
 - Pendiente (paso 03): interceptor de request con `Authorization: Bearer` y manejo de 401 (logout + redirect a `/login`).
 
