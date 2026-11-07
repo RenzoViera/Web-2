@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { env } from '@/config/env';
+import { getStoredToken } from '@/utils/authStorage';
 import { ApiError } from './ApiError';
 
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -14,12 +15,28 @@ export const axiosClient = axios.create({
   headers: { Accept: 'application/json' },
 });
 
+/** @type {((error: ApiError) => void) | null} */
+let unauthorizedHandler = null;
+
+/**
+ * Registra quién reacciona a un 401 de cualquier request (AuthProvider: cierra la sesión). `null` lo quita.
+ * @param {((error: ApiError) => void) | null} handler
+ */
+export const setUnauthorizedHandler = (handler) => {
+  unauthorizedHandler = handler;
+};
+
 /** @param {unknown} error */
 export const isRequestCanceled = (error) => axios.isCancel(error);
 
 /**
  * @param {import('axios').AxiosError<{
- *   error?: { code?: string, message?: string, details?: [] | null, requestId?: string },
+ *   error?: {
+ *     code?: string,
+ *     message?: string,
+ *     details?: import('./ApiError').ApiErrorDetail[] | null,
+ *     requestId?: string,
+ *   },
  * }>} error
  */
 const toApiError = (error) => {
@@ -46,8 +63,21 @@ const toApiError = (error) => {
   });
 };
 
+// El token se lee en cada request: si se borra la sesión a mano, el siguiente request sale sin token → 401.
+axiosClient.interceptors.request.use((config) => {
+  const token = getStoredToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
 axiosClient.interceptors.response.use(
   (response) => response,
-  // Las cancelaciones (AbortController) se propagan tal cual para poder ignorarlas.
-  (error) => Promise.reject(isRequestCanceled(error) ? error : toApiError(error)),
+  (error) => {
+    // Las cancelaciones (AbortController) se propagan tal cual para poder ignorarlas.
+    if (isRequestCanceled(error)) return Promise.reject(error);
+
+    const apiError = toApiError(error);
+    if (apiError.status === 401) unauthorizedHandler?.(apiError);
+    return Promise.reject(apiError);
+  },
 );
