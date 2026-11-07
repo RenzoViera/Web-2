@@ -133,3 +133,49 @@ export const LogOutIcon = (props) => (
     <path d="M21 12H9" />
   </Icon>
 );
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const PlusIcon = (props) => (
+  <Icon {...props}>
+    <path d="M12 5v14M5 12h14" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const TrashIcon = (props) => (
+  <Icon {...props}>
+    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const EditIcon = (props) => (
+  <Icon {...props}>
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const ArrowLeftIcon = (props) => (
+  <Icon {...props}>
+    <path d="m12 19-7-7 7-7M5 12h14" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const UsersIcon = (props) => (
+  <Icon {...props}>
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const CheckIcon = (props) => (
+  <Icon {...props}>
+    <path d="M20 6 9 17l-5-5" />
+  </Icon>
+);
+
