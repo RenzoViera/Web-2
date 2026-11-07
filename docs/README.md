@@ -7,10 +7,11 @@
 | [api/endpoints.md](api/endpoints.md) | Todos los endpoints del proyecto con su estado (implementado / pendiente y en qué paso) |
 | [api/modelo-datos.md](api/modelo-datos.md) | Tablas, columnas, índices, asociaciones, scopes, datos de prueba y diferencias con el plan |
 | [api/seguridad.md](api/seguridad.md) | Autenticación, autorización, matriz de acceso e invariantes de seguridad |
-| [web/frontend.md](web/frontend.md) | Cómo está construida la SPA: estructura, tokens de diseño, componentes, errores globales, router |
+| [web/frontend.md](web/frontend.md) | Cómo está construida la SPA: estructura, sesión, rutas protegidas, formularios, toasts, componentes, errores globales, router |
 | [docker.md](docker.md) | Servicios de Docker Compose y cómo correr el proyecto con o sin Docker |
 | [pasos/paso-01.md](pasos/paso-01.md) | Registro del paso 01: qué se hizo, cómo probarlo y notas para el siguiente paso |
 | [pasos/paso-02.md](pasos/paso-02.md) | Registro del paso 02: modelo de datos, migraciones, seed y Docker completo |
+| [pasos/paso-03.md](pasos/paso-03.md) | Registro del paso 03: autenticación (API + Web), correcciones por las reglas y notas para el paso 04 |
 
 Reglas de desarrollo: [../REGLAS.md](../REGLAS.md). Documentación interactiva de la API: `http://localhost:3000/api/docs`.
 
