@@ -68,3 +68,68 @@ export const InfoIcon = (props) => (
     <path d="M12 16v-4M12 8h.01" />
   </Icon>
 );
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const AlertCircleIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 8v4M12 16h.01" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const EyeIcon = (props) => (
+  <Icon {...props}>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const EyeOffIcon = (props) => (
+  <Icon {...props}>
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+    <path d="M1 1l22 22" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const ChevronDownIcon = (props) => (
+  <Icon {...props}>
+    <path d="m6 9 6 6 6-6" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const BookOpenIcon = (props) => (
+  <Icon {...props}>
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const PresentationIcon = (props) => (
+  <Icon {...props}>
+    <path d="M2 3h20" />
+    <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+    <path d="m7 21 5-5 5 5" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const ClockIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 6v6l4 2" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const LogOutIcon = (props) => (
+  <Icon {...props}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <path d="m16 17 5-5-5-5" />
+    <path d="M21 12H9" />
+  </Icon>
+);
