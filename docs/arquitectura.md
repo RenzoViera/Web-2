@@ -8,13 +8,13 @@
 │  ├─ src/
 │  │  ├─ config/        env.js (variables validadas), database.js (Sequelize), zod.js (mensajes en español)
 │  │  ├─ models/        modelos Sequelize + asociaciones            (paso 02)
-│  │  ├─ repositories/  acceso a datos (únicos que tocan modelos)    (desde paso 03)
+│  │  ├─ repositories/  acceso a datos (únicos que tocan modelos; columnas explícitas)
 │  │  ├─ services/      lógica de negocio y reglas RN-xx
 │  │  ├─ controllers/   req → service → res, sin lógica ni queries
 │  │  ├─ routes/        routers por dominio, montados en routes/index.js
-│  │  ├─ middlewares/   requestId, validate, notFound, errorHandler (+ auth en paso 03)
+│  │  ├─ middlewares/   requestId, validate, notFound, errorHandler, authenticate, authorize, rateLimit
 │  │  ├─ validators/    esquemas Zod por dominio
-│  │  ├─ utils/         AppError, errorCodes, pagination, logger
+│  │  ├─ utils/         AppError, errorCodes, dbErrors, pagination, roles, sanitizers, logger
 │  │  ├─ app.js         createApp(): middlewares y rutas
 │  │  └─ server.js      arranque, conexión a BD y apagado ordenado
 │  ├─ db/               config.cjs, migrations/, seeders/ (sequelize-cli, .cjs)

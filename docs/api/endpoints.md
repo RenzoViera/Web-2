@@ -15,10 +15,12 @@ Al implementar un endpoint: cambiar su estado aquí y documentarlo en `api/docs/
 
 | Método | Ruta | Acceso | Descripción | Estado |
 |---|---|---|---|---|
-| POST | `/auth/register` | Público | Registro con rol → 201 `{ user, token }`, 409 email duplicado | ⏳ Paso 03 |
-| POST | `/auth/login` | Público (rate limit) | Login → 200 `{ user, token }`, 401 genérico, 429 | ⏳ Paso 03 |
-| GET | `/users/me` | Autenticado | Perfil propio | ⏳ Paso 03 |
-| PUT | `/users/me` | Autenticado | Editar nombre, email, password (rol no editable) | ⏳ Paso 03 |
+| POST | `/auth/register` | Público | Registro con rol → 201 `{ user, token }`, 409 `EMAIL_TAKEN` | ✅ Paso 03 |
+| POST | `/auth/login` | Público (5 fallidos/min por IP) | Login → 200 `{ user, token }`, 401 `INVALID_CREDENTIALS` genérico, 429 | ✅ Paso 03 |
+| GET | `/users/me` | Autenticado | Perfil propio (401 si el usuario ya no existe) | ✅ Paso 03 |
+| PUT | `/users/me` | Autenticado | Editar nombre, email y/o password (al menos uno; password exige `passwordActual`; rol no editable) → usuario actualizado | ✅ Paso 03 |
+
+Cerrar sesión: stateless, el cliente borra el token (no hay endpoint).
 
 ## Cursos
 

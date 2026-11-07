@@ -79,6 +79,34 @@ router.post('/', validate({ body: crearCursoSchema }), controller.create);
 - Solo body inválido → **422** `VALIDATION_ERROR`; params/query inválidos → **400** `BAD_REQUEST` (según §2.2 del plan).
 - Esquemas reutilizables en `validators/common.validator.js`: `idSchema`, `idParamSchema`, `paginationQuerySchema` (`page` ≥ 1 default 1, `limit` 1-50 default 9).
 
+## Autenticación y autorización (paso 03)
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| Contraseñas | `services/auth.service.js` → `hashPassword`, `verifyPassword` | bcrypt costo 10. Si el email no existe, el login compara igual contra un hash ficticio: tarda lo mismo y no revela qué emails existen. |
+| Token | `services/auth.service.js` → `signToken`, `verifyToken` | JWT HS256 con `{ id, rol }` que expira según `JWT_EXPIRES_IN`. `verifyToken` fija el algoritmo, distingue expirado (`TOKEN_EXPIRED`) de inválido (`INVALID_TOKEN`) y valida la forma del payload con Zod. |
+| `authenticate` | `middlewares/authenticate.js` | `Authorization: Bearer <token>` → `req.user = { id, rol }`. No consulta la BD: el rol no es editable y el token firmado ya lo trae (0 consultas extra por request). Sin header → 401 `UNAUTHORIZED`. |
+| `authorize(...roles)` | `middlewares/authorize.js` | Después de `authenticate`; 403 `FORBIDDEN` si el rol no coincide. |
+| `loginRateLimit` | `middlewares/rateLimit.js` | 5 intentos **fallidos** por minuto e IP (los exitosos no cuentan) → 429 `TOO_MANY_REQUESTS` con `Retry-After`. |
+
+```js
+cursoRoutes.post('/', authenticate, authorize(ROLES.INSTRUCTOR), validate({ body: crearCursoSchema }), cursoController.create);
+```
+
+- Cerrar sesión es stateless: el cliente borra el token (no hay endpoint).
+- Roles en `utils/roles.js` (`ROLES.ESTUDIANTE`, `ROLES.INSTRUCTOR`); los validadores usan `ROLE_VALUES`.
+- Invariantes y matriz de acceso: [seguridad.md](seguridad.md).
+
+## Repositorios
+
+- Son los únicos que importan modelos. Piden columnas explícitas (`attributes`; `returning` en create/update) y acotan los campos escribibles con `fields` (`REGLAS.md` B.20): con `attributes` explícito el `exclude` del `defaultScope` no aplica, así que el repositorio decide qué columnas salen.
+- Los servicios los importan como namespace: `import * as usuarioRepository from '../repositories/usuario.repository.js'`.
+- `usuario.repository.js`: `findById`, `findByEmailWithPassword` (solo login), `findPasswordHash`, `create` (INSERT ... RETURNING) y `update` (UPDATE ... RETURNING, `null` si el usuario no existe).
+
+## Sanitizadores (`utils/sanitizers.js`)
+
+`toPublicUsuario(usuario)` → `{ id, nombre, email, rol, createdAt }` (lista blanca). Toda respuesta con usuarios pasa por él; `passwordHash` nunca sale.
+
 ## Paginación (`utils/pagination.js`)
 
 ```js
@@ -92,7 +120,7 @@ return buildPaginatedResponse(rows, count, { page, limit });
 
 ## Health (`GET /api/health`)
 
-Capas completas como ejemplo de referencia: `routes/health.routes.js` → `controllers/health.controller.js` → `services/health.service.js`. El servicio prueba la BD con `authenticate()` (timeout 3 s): 200 `{ status: "ok", database: "up" }` o 503 `{ status: "degraded", database: "down" }`. Docker Compose lo usa como healthcheck del contenedor `api`.
+Capas mínimas: `routes/health.routes.js` → `controllers/health.controller.js` → `services/health.service.js`. El módulo de referencia con todas las capas (validador, repositorio, servicio, controlador, rutas) es auth/usuarios del paso 03 (`REGLAS.md` B.12). El servicio prueba la BD con `authenticate()` (timeout 3 s): 200 `{ status: "ok", database: "up" }` o 503 `{ status: "degraded", database: "down" }`. Docker Compose lo usa como healthcheck del contenedor `api`.
 
 ## Swagger (`/api/docs`)
 
