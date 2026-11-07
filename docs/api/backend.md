@@ -102,6 +102,11 @@ cursoRoutes.post('/', authenticate, authorize(ROLES.INSTRUCTOR), validate({ body
 - Son los únicos que importan modelos. Piden columnas explícitas (`attributes`; `returning` en create/update) y acotan los campos escribibles con `fields` (`REGLAS.md` B.20): con `attributes` explícito el `exclude` del `defaultScope` no aplica, así que el repositorio decide qué columnas salen.
 - Los servicios los importan como namespace: `import * as usuarioRepository from '../repositories/usuario.repository.js'`.
 - `usuario.repository.js`: `findById`, `findByEmailWithPassword` (solo login), `findPasswordHash`, `create` (INSERT ... RETURNING) y `update` (UPDATE ... RETURNING, `null` si el usuario no existe).
+- `curso.repository.js`: `findById`, `create`, `update`, `updateEstado`, `deleteById`, `countInscripciones`, `countLecciones`, `findInstructorCursos` (con conteo de lecciones e inscritos por subconsulta SQL sin N+1), `findInstructorCursoById` (con lecciones y preguntas completas para editor), `findPublicados` (solo publicados, búsqueda `q` por ILIKE en título, filtros y paginación) y `findPublicadoById` (con temario público resumido).
+
+## Middleware de propiedad de curso (`middlewares/isCourseOwner.js`)
+
+Valida que el curso con id `:id` exista (404 `COURSE_NOT_FOUND`) y que el usuario autenticado sea el instructor creador (`curso.instructorId === req.user.id`; si no, 403 `FORBIDDEN`). Deja `req.curso = curso` disponible para el controlador o siguientes middlewares. Reutilizable para los pasos siguientes.
 
 ## Sanitizadores (`utils/sanitizers.js`)
 
