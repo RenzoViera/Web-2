@@ -15,6 +15,8 @@ const RegisterPage = lazy(() => import('@/pages/public/RegisterPage'));
 const ProfilePage = lazy(() => import('@/pages/account/ProfilePage'));
 const ComingSoonPage = lazy(() => import('@/pages/public/ComingSoonPage'));
 const NotFoundPage = lazy(() => import('@/pages/public/NotFoundPage'));
+const InstructorCoursesPage = lazy(() => import('@/pages/instructor/InstructorCoursesPage'));
+const CourseEditorPage = lazy(() => import('@/pages/instructor/CourseEditorPage'));
 
 /*
  * Pendiente: páginas reales del instructor (04, 05, 09) y del estudiante (06, 07, 08); reemplazan a ComingSoonPage
@@ -48,7 +50,11 @@ const router = createBrowserRouter([
               },
               {
                 element: <RoleRoute roles={[ROLES.INSTRUCTOR]} />,
-                children: [{ path: PATHS.instructorCursos, element: <ComingSoonPage title="Mis cursos como instructor" /> }],
+                children: [
+                  { path: PATHS.instructorCursos, element: <InstructorCoursesPage /> },
+                  { path: PATHS.instructorNuevoCurso, element: <CourseEditorPage /> },
+                  { path: PATHS.instructorEditarCurso, element: <CourseEditorPage /> },
+                ],
               },
             ],
           },

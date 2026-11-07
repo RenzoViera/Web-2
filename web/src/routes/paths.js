@@ -9,7 +9,15 @@ export const PATHS = Object.freeze({
   catalogo: '/cursos',
   misCursos: '/mis-cursos',
   instructorCursos: '/instructor/cursos',
+  instructorNuevoCurso: '/instructor/cursos/nuevo',
+  instructorEditarCurso: '/instructor/cursos/:id/editar',
 });
+
+/**
+ * Genera la ruta para editar un curso.
+ * @param {number | string} id
+ */
+export const instructorEditarCursoPath = (id) => `/instructor/cursos/${id}/editar`;
 
 /** @type {Readonly<Record<Rol, string>>} */
 const ROLE_HOME = Object.freeze({
