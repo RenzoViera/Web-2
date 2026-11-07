@@ -28,19 +28,31 @@ requestId → helmet → cors → express.json(100kb) → morgan → /api routes
 - **requestId**: genera un UUID (o reutiliza un `X-Request-Id` válido del cliente), lo deja en `req.id` y lo devuelve en el header `X-Request-Id`. Aparece en cada línea de morgan y en los logs de errores 500, así un error reportado por el usuario se ubica en los logs.
 - **helmet**: headers de seguridad; se desactiva `upgrade-insecure-requests` porque la API se sirve por HTTP en Docker (si no, Swagger UI no carga sus assets).
 - **cors**: solo los orígenes de `CORS_ORIGIN` (lista separada por comas); expone `X-Request-Id` al frontend.
-- **morgan**: `:id :method :url :status :res[content-length] - :response-time ms`.
+- **morgan**: `:id :method :url :status :res[content-length] - :response-time ms user=:user` (`user` = id del usuario autenticado o `-`).
 
 ## Errores
 
-Formato único en todas las respuestas de error:
+Formato único en todas las respuestas de error (`REGLAS.md` B.4):
 
 ```json
-{ "error": { "code": "VALIDATION_ERROR", "message": "Los datos enviados no son válidos", "details": [ { "location": "body", "field": "email", "message": "..." } ] } }
+{
+  "error": {
+    "status": 422,
+    "code": "VALIDATION_ERROR",
+    "message": "Los datos enviados no son válidos",
+    "details": [{ "location": "body", "field": "email", "message": "Ingresa un email válido" }],
+    "requestId": "3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f",
+    "timestamp": "2026-11-07T12:00:00.000Z"
+  }
+}
 ```
 
+- `requestId` es el mismo valor del header `X-Request-Id`: el usuario lo copia del aviso de error del front y con él se encuentra la línea en los logs.
+- 4xx: `message` legible para el usuario final (el front lo muestra tal cual). 5xx: mensaje genérico `Error interno del servidor`, sin SQL ni stack; se loguea `[requestId] MÉTODO url 500 user=<id>` + stack (solo el stack: el objeto de un error SQL trae los valores de la consulta).
 - Se lanzan con `throw new AppError(status, ERROR_CODES.X, mensaje, details)`. Express 5 captura errores de funciones `async`, no hace falta `try/catch` ni `asyncHandler`.
 - `utils/errorCodes.js` centraliza los códigos; cada paso agrega los suyos (`LESSON_LOCKED`, `ATTEMPTS_EXHAUSTED`...).
-- `middlewares/errorHandler.js` traduce:
+- Los errores esperables de la BD (email duplicado, FK) se traducen a 4xx **en el servicio** con `utils/dbErrors.js` (`isUniqueViolation(error, campo)`), con un código y mensaje específicos.
+- `middlewares/errorHandler.js` es el único manejador y la red de seguridad para lo que no se tradujo antes:
 
 | Error | HTTP | code |
 |---|---|---|
@@ -89,7 +101,7 @@ Capas completas como ejemplo de referencia: `routes/health.routes.js` → `contr
 
 ## Logs (`utils/logger.js`)
 
-`logger.info/warn/error(mensaje, meta?)` con timestamp ISO. ESLint prohíbe `console.*` fuera de este archivo.
+`logger.info/warn/error(mensaje, meta?)` con timestamp ISO. ESLint prohíbe `console.*` fuera de este archivo. Nunca se loguean contraseñas, hashes, tokens ni bodies de auth (`REGLAS.md` B.9).
 
 ## Scripts (`api/package.json`)
 

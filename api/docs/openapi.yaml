@@ -6,7 +6,7 @@ info:
     API REST de MiniAula (Proyecto final Ingeniería Web 2).
 
     - Todas las respuestas son JSON.
-    - Errores con formato único: `{ "error": { "code", "message", "details" } }`.
+    - Errores con formato único: `{ "error": { "status", "code", "message", "details", "requestId", "timestamp" } }`.
     - Listados paginados: `{ "data": [...], "meta": { "page", "limit", "total", "totalPages" } }`.
     - Cada respuesta incluye el header `X-Request-Id` para rastrear la solicitud en los logs.
 
@@ -115,19 +115,32 @@ components:
       properties:
         error:
           type: object
-          required: [code, message, details]
+          required: [status, code, message, details, requestId, timestamp]
           properties:
+            status:
+              type: integer
+              description: Código HTTP (el mismo de la respuesta)
+              example: 422
             code:
               type: string
               example: VALIDATION_ERROR
             message:
               type: string
+              description: Mensaje legible para el usuario final (genérico en los 5xx)
               example: Los datos enviados no son válidos
             details:
               type: array
               nullable: true
               items:
                 $ref: '#/components/schemas/ErrorDetail'
+            requestId:
+              type: string
+              description: Mismo valor que el header X-Request-Id; ubica la solicitud en los logs
+              example: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+            timestamp:
+              type: string
+              format: date-time
+              example: '2026-11-07T12:00:00.000Z'
     PaginationMeta:
       type: object
       required: [page, limit, total, totalPages]
@@ -153,12 +166,15 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error:
+              status: 400
               code: BAD_REQUEST
               message: Parámetros de la solicitud inválidos
               details:
                 - location: query
                   field: limit
-                  message: Too big
+                  message: 'Demasiado grande: se esperaba que número fuera <=50'
+              requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+              timestamp: '2026-11-07T12:00:00.000Z'
     Unauthorized:
       description: Sin token, token inválido/expirado o credenciales incorrectas
       content:
@@ -179,9 +195,12 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error:
+              status: 404
               code: ROUTE_NOT_FOUND
               message: Ruta GET /api/noexiste no encontrada
               details: null
+              requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+              timestamp: '2026-11-07T12:00:00.000Z'
     Conflict:
       description: Conflicto con el estado actual (duplicado, dependencias)
       content:
@@ -202,6 +221,9 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error:
+              status: 500
               code: INTERNAL_ERROR
               message: Error interno del servidor
               details: null
+              requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+              timestamp: '2026-11-07T12:00:00.000Z'
