@@ -14,7 +14,11 @@ const envSchema = z.object({
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number().int().min(1).max(65535).default(5432),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET debe tener al menos 32 caracteres'),
-  JWT_EXPIRES_IN: z.string().min(1).default('2h'),
+  // jsonwebtoken lee un número sin unidad como milisegundos ("3600" = 3,6 s): se exige la unidad.
+  JWT_EXPIRES_IN: z
+    .string()
+    .regex(/^\d+[smhd]$/, 'JWT_EXPIRES_IN debe ser un número con unidad s, m, h o d (p. ej. 2h)')
+    .default('2h'),
   CORS_ORIGIN: z
     .string()
     .min(1)
