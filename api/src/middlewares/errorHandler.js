@@ -6,7 +6,10 @@ import { logger } from '../utils/logger.js';
 
 const fieldDetails = (items) => items.map((item) => ({ field: item.path ?? null, message: item.message }));
 
-/** Traduce cualquier error conocido a AppError; devuelve null si es inesperado. */
+/**
+ * Traduce cualquier error conocido a AppError; devuelve null si es inesperado.
+ * Los errores esperables de la BD se traducen en cada servicio (REGLAS B.5): este mapeo es la red de seguridad.
+ */
 const toAppError = (err) => {
   if (err instanceof AppError) return err;
 
@@ -39,20 +42,23 @@ const toAppError = (err) => {
   return null;
 };
 
+/** Cuerpo único de error: `{ error: { status, code, message, details, requestId, timestamp } }`. */
+const sendError = (req, res, { status, code, message, details }) =>
+  res.status(status).json({
+    error: { status, code, message, details: details ?? null, requestId: req.id, timestamp: new Date().toISOString() },
+  });
+
 // Express identifica los manejadores de error por su aridad (4 parámetros).
 export const errorHandler = (err, req, res, next) => {
   if (res.headersSent) return next(err);
 
   const appError = toAppError(err);
+  if (appError) return sendError(req, res, appError);
 
-  if (!appError) {
-    logger.error(`[${req.id}] ${req.method} ${req.originalUrl} — error no controlado`, err);
-    return res.status(500).json({
-      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Error interno del servidor', details: null },
-    });
-  }
-
-  return res.status(appError.status).json({
-    error: { code: appError.code, message: appError.message, details: appError.details ?? null },
-  });
+  // Solo el stack: el objeto de un error SQL trae `parameters` con valores de la consulta (hashes, emails).
+  logger.error(
+    `[${req.id}] ${req.method} ${req.originalUrl} 500 user=${req.user?.id ?? '-'} — error no controlado`,
+    err instanceof Error ? err.stack : err,
+  );
+  return sendError(req, res, new AppError(500, ERROR_CODES.INTERNAL_ERROR, 'Error interno del servidor'));
 };

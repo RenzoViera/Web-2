@@ -1,20 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
-import bcrypt from 'bcrypt';
 import { sequelize } from '../config/database.js';
 
-export class Usuario extends Model {
-  /**
-   * Compara una contraseña en texto plano contra el hash del usuario.
-   * @param {string} password
-   * @returns {Promise<boolean>}
-   */
-  async validarPassword(password) {
-    if (!this.passwordHash) {
-      return false;
-    }
-    return bcrypt.compare(password, this.passwordHash);
-  }
-}
+export class Usuario extends Model {}
 
 Usuario.init(
   {
@@ -56,13 +43,9 @@ Usuario.init(
     sequelize,
     modelName: 'Usuario',
     tableName: 'usuarios',
+    // Red de seguridad: los repositorios piden columnas explícitas (con `attributes` explícito no aplica).
     defaultScope: {
       attributes: { exclude: ['passwordHash'] },
-    },
-    scopes: {
-      conPassword: {
-        attributes: { include: ['passwordHash'] },
-      },
     },
   },
 );

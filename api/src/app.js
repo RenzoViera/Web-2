@@ -10,7 +10,9 @@ import { requestId } from './middlewares/requestId.js';
 import { apiRoutes } from './routes/index.js';
 
 morgan.token('id', (req) => req.id);
-const LOG_FORMAT = ':id :method :url :status :res[content-length] - :response-time ms';
+// `req.user` lo deja `authenticate`; morgan escribe la línea al terminar la respuesta, así que ya existe.
+morgan.token('user', (req) => (req.user ? String(req.user.id) : '-'));
+const LOG_FORMAT = ':id :method :url :status :res[content-length] - :response-time ms user=:user';
 
 export const createApp = () => {
   const app = express();

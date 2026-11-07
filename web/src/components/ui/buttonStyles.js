@@ -1,15 +1,17 @@
 import { cn } from '@/utils/cn';
 
 const BASE =
-  'relative inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap select-none ' +
+  'relative inline-flex items-center gap-2 rounded-lg font-medium whitespace-nowrap select-none ' +
   'transition duration-150 active:scale-[0.97] motion-reduce:active:scale-100 ' +
   'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100';
 
 export const BUTTON_VARIANTS = {
-  primary: 'bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active',
-  secondary: 'border border-border-strong bg-surface text-fg hover:bg-surface-muted active:bg-border',
-  ghost: 'text-fg-muted hover:bg-surface-muted hover:text-fg active:bg-border',
-  danger: 'bg-danger text-fg-inverse hover:bg-danger-hover active:bg-danger-active',
+  primary: 'justify-center bg-primary text-primary-fg hover:bg-primary-hover active:bg-primary-active',
+  secondary: 'justify-center border border-border-strong bg-surface text-fg hover:bg-surface-muted active:bg-border',
+  ghost: 'justify-center text-fg-muted hover:bg-surface-muted hover:text-fg active:bg-border',
+  danger: 'justify-center bg-danger text-fg-inverse hover:bg-danger-hover active:bg-danger-active',
+  /** Ítem de menú desplegable: como `ghost`, alineado a la izquierda. */
+  menu: 'justify-start text-fg-muted hover:bg-surface-muted hover:text-fg active:bg-border',
 };
 
 export const BUTTON_SIZES = {
@@ -17,6 +19,7 @@ export const BUTTON_SIZES = {
   md: 'h-10 px-4 text-sm',
   lg: 'h-12 px-6 text-base',
   icon: 'size-10',
+  iconSm: 'size-8',
 };
 
 /**
