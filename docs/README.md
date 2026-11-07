@@ -5,6 +5,7 @@
 | [arquitectura.md](arquitectura.md) | Monorepo, stack, decisiones técnicas y desviaciones justificadas |
 | [api/backend.md](api/backend.md) | Cómo está construida la API: configuración, capas, errores, validación, paginación, logs, Swagger |
 | [api/endpoints.md](api/endpoints.md) | Todos los endpoints del proyecto con su estado (implementado / pendiente y en qué paso) |
+| [api/modelo-datos.md](api/modelo-datos.md) | Tablas, columnas, índices, asociaciones, scopes, datos de prueba y diferencias con el plan |
 | [web/frontend.md](web/frontend.md) | Cómo está construida la SPA: estructura, tokens de diseño, componentes, errores globales, router |
 | [docker.md](docker.md) | Servicios de Docker Compose y cómo correr el proyecto con o sin Docker |
 | [pasos/paso-01.md](pasos/paso-01.md) | Registro del paso 01: qué se hizo, cómo probarlo y notas para el siguiente paso |
