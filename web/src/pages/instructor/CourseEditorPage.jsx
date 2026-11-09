@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { LessonList } from '@/components/instructor/LessonList';
 import { ArrowLeftIcon, BookOpenIcon, TrashIcon } from '@/components/icons';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
@@ -312,7 +313,7 @@ export default function CourseEditorPage() {
           </Card>
         </div>
 
-        {/* Sección de Lecciones (Placeholder para Paso 05) */}
+        {/* Temario: agregar, editar, eliminar y reordenar lecciones */}
         <div>
           <Card className="flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
@@ -327,42 +328,16 @@ export default function CourseEditorPage() {
               )}
             </div>
 
-            {!isEditing ? (
+            {isEditing && curso ? (
+              <LessonList
+                cursoId={cursoId}
+                lecciones={lecciones}
+                onChange={(nuevas) => setCurso((prev) => (prev ? { ...prev, lecciones: nuevas } : prev))}
+              />
+            ) : (
               <p className="py-6 text-center text-sm text-fg-muted">
                 Primero crea el curso para poder comenzar a redactar y ordenar las lecciones.
               </p>
-            ) : lecciones.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <p className="text-sm font-medium text-fg">Aún no hay lecciones agregadas</p>
-                <p className="text-xs text-fg-muted">
-                  Recuerda: Para poder publicar el curso debes contar con al menos una lección (RN-05).
-                </p>
-                <div className="mt-3 rounded-lg border border-dashed border-border bg-surface-muted p-3 text-xs text-fg-subtle">
-                  📌 En el <strong>Paso 05</strong> se habilitará el editor y reordenamiento de lecciones y preguntas.
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <div className="mb-2 rounded-lg border border-border bg-surface-muted/60 p-2 text-xs text-fg-subtle">
-                  📌 En el <strong>Paso 05</strong> podrás agregar, editar y reordenar lecciones.
-                </div>
-                {lecciones.map((leccion) => (
-                  <div
-                    key={leccion.id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-surface p-3 text-sm"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold text-fg-muted">
-                        {leccion.orden}
-                      </span>
-                      <span className="truncate font-medium text-fg">{leccion.titulo}</span>
-                    </div>
-                    <Badge variant={leccion.tipo === 'cuestionario' ? 'primary' : 'neutral'}>
-                      {leccion.tipo === 'cuestionario' ? 'Cuestionario' : 'Contenido'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
             )}
           </Card>
         </div>
