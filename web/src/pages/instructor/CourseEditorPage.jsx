@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { LinkButton } from '@/components/ui/LinkButton';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 import { useAppForm } from '@/hooks/useAppForm';
 import { useToast } from '@/hooks/useToast';
 import { PATHS } from '@/routes/paths';
@@ -61,7 +62,13 @@ export default function CourseEditorPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const { register, setFieldValue, submit, formError, isSubmitting, reset } = useAppForm({
+  const {
+    register,
+    submit,
+    formError,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useAppForm({
     defaultValues: {
       titulo: '',
       descripcion: '',
@@ -174,7 +181,7 @@ export default function CourseEditorPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <LinkButton to={PATHS.instructorCursos} variant="outline" size="sm">
+          <LinkButton to={PATHS.instructorCursos} variant="secondary" size="sm">
             <ArrowLeftIcon className="size-4" />
             Volver a mis cursos
           </LinkButton>
@@ -200,7 +207,7 @@ export default function CourseEditorPage() {
             {curso?.estado === 'publicado' && (
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 loading={actionLoading}
                 onClick={() => handleCambiarEstado('archivado')}
               >
@@ -210,7 +217,7 @@ export default function CourseEditorPage() {
             {curso?.estado === 'archivado' && (
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 loading={actionLoading}
                 onClick={() => handleCambiarEstado('borrador')}
               >
@@ -252,6 +259,7 @@ export default function CourseEditorPage() {
                 label="Título del curso"
                 required
                 placeholder="Ej. Programación Frontend con React"
+                error={errors.titulo?.message}
                 {...register('titulo')}
               />
 
@@ -260,6 +268,7 @@ export default function CourseEditorPage() {
                   label="Categoría"
                   required
                   placeholder="Ej. Desarrollo Web"
+                  error={errors.categoria?.message}
                   {...register('categoria')}
                 />
 
@@ -272,34 +281,25 @@ export default function CourseEditorPage() {
                 />
               </div>
 
-              <div>
-                <label htmlFor="descripcion" className="mb-1.5 block text-sm font-medium text-fg">
-                  Descripción
-                </label>
-                <textarea
-                  id="descripcion"
-                  rows={4}
-                  placeholder="Describe de qué trata el curso, a quién va dirigido y qué aprenderán los estudiantes..."
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-primary focus:ring-2 focus:ring-ring/20 focus:outline-none"
-                  {...register('descripcion')}
-                  onChange={(e) => {
-                    register('descripcion').onChange(e);
-                    setFieldValue('descripcion', e.target.value);
-                  }}
-                />
-              </div>
+              <Textarea
+                label="Descripción"
+                placeholder="Describe de qué trata el curso, a quién va dirigido y qué aprenderán los estudiantes..."
+                error={errors.descripcion?.message}
+                {...register('descripcion')}
+              />
 
               <Input
                 label="URL de imagen de portada (opcional)"
                 type="url"
                 placeholder="https://ejemplo.com/imagen.jpg"
+                error={errors.imagenUrl?.message}
                 {...register('imagenUrl')}
               />
 
               <div className="mt-2 flex justify-end gap-3 border-t border-border pt-4">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => navigate(PATHS.instructorCursos)}
                 >
                   Cancelar

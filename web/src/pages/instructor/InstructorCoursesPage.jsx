@@ -152,7 +152,7 @@ export default function InstructorCoursesPage() {
                   <div className="border-t border-border bg-surface-muted/50 p-4">
                     <LinkButton
                       to={instructorEditarCursoPath(curso.id)}
-                      variant="outline"
+                      variant="secondary"
                       className="w-full justify-center"
                     >
                       Editar curso
@@ -170,7 +170,7 @@ export default function InstructorCoursesPage() {
               </p>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -178,7 +178,7 @@ export default function InstructorCoursesPage() {
                   Anterior
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   disabled={page >= meta.totalPages}
                   onClick={() => setPage((p) => p + 1)}
