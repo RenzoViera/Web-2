@@ -50,7 +50,7 @@ export default function CourseEditorPage() {
   const cursoId = Number(id);
 
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const toast = useToast();
 
   const [curso, setCurso] = useState(/** @type {import('@/services/cursosService').InstructorCursoDetalle | null} */ (null));
   const [loadingCurso, setLoadingCurso] = useState(isEditing);
@@ -117,10 +117,10 @@ export default function CourseEditorPage() {
     if (isEditing) {
       const actualizado = await cursosService.actualizarCurso(cursoId, payload);
       setCurso((prev) => (prev ? { ...prev, ...actualizado } : null));
-      showToast('Curso actualizado con éxito', { variant: 'success' });
+      toast.success('Curso actualizado con éxito');
     } else {
       const nuevo = await cursosService.crearCurso(payload);
-      showToast('Curso creado en estado borrador', { variant: 'success' });
+      toast.success('Curso creado en estado borrador');
       navigate(`/instructor/cursos/${nuevo.id}/editar`, { replace: true });
     }
   });
@@ -132,11 +132,11 @@ export default function CourseEditorPage() {
       const actualizado = await cursosService.cambiarEstadoCurso(cursoId, nuevoEstado);
       setCurso((prev) => (prev ? { ...prev, estado: actualizado.estado } : null));
       const estadoLabel = nuevoEstado === 'publicado' ? 'publicado' : nuevoEstado === 'archivado' ? 'archivado' : 'en borrador';
-      showToast(`El curso ahora está ${estadoLabel}`, { variant: 'success' });
+      toast.success(`El curso ahora está ${estadoLabel}`);
     } catch (err) {
       const msg = /** @type {any} */ (err).message || 'No se pudo cambiar el estado del curso';
       setActionError(msg);
-      showToast(msg, { variant: 'danger' });
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }
@@ -148,12 +148,12 @@ export default function CourseEditorPage() {
     try {
       await cursosService.eliminarCurso(cursoId);
       setShowDeleteDialog(false);
-      showToast('Curso eliminado correctamente', { variant: 'success' });
+      toast.success('Curso eliminado correctamente');
       navigate(PATHS.instructorCursos);
     } catch (err) {
       const msg = /** @type {any} */ (err).message || 'No se pudo eliminar el curso';
       setActionError(msg);
-      showToast(msg, { variant: 'danger' });
+      toast.error(msg);
       setShowDeleteDialog(false);
     } finally {
       setDeleteLoading(false);
