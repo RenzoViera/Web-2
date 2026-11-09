@@ -30,6 +30,18 @@ Leccion.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    videoUrl: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    notaMinima: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      validate: {
+        min: 0,
+        max: 100,
+      },
+    },
     tipo: {
       type: DataTypes.ENUM('contenido', 'cuestionario'),
       allowNull: false,
