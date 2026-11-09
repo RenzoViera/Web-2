@@ -251,8 +251,8 @@ export default function CourseEditorPage() {
               </p>
             </div>
 
-            {formError && <Alert variant="danger">{formError}</Alert>}
-            {actionError && <Alert variant="danger">{actionError}</Alert>}
+            {formError && <Alert variant="error">{formError}</Alert>}
+            {actionError && <Alert variant="error">{actionError}</Alert>}
 
             <form onSubmit={handleSave} className="flex flex-col gap-4">
               <Input
