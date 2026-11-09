@@ -17,9 +17,11 @@ const ComingSoonPage = lazy(() => import('@/pages/public/ComingSoonPage'));
 const NotFoundPage = lazy(() => import('@/pages/public/NotFoundPage'));
 const InstructorCoursesPage = lazy(() => import('@/pages/instructor/InstructorCoursesPage'));
 const CourseEditorPage = lazy(() => import('@/pages/instructor/CourseEditorPage'));
+const LessonEditorPage = lazy(() => import('@/pages/instructor/LessonEditorPage'));
+const QuestionModalPage = lazy(() => import('@/pages/instructor/QuestionModalPage'));
 
 /*
- * Pendiente: páginas reales del instructor (04, 05, 09) y del estudiante (06, 07, 08); reemplazan a ComingSoonPage
+ * Pendiente: páginas reales del instructor (09) y del estudiante (06, 07, 08); reemplazan a ComingSoonPage
  * o se suman como hijas del RoleRoute de su rol.
  */
 const router = createBrowserRouter([
@@ -54,6 +56,16 @@ const router = createBrowserRouter([
                   { path: PATHS.instructorCursos, element: <InstructorCoursesPage /> },
                   { path: PATHS.instructorNuevoCurso, element: <CourseEditorPage /> },
                   { path: PATHS.instructorEditarCurso, element: <CourseEditorPage /> },
+                  { path: PATHS.instructorNuevaLeccion, element: <LessonEditorPage /> },
+                  {
+                    // El modal de pregunta es ruta hija: el editor de lección queda detrás (REGLAS C.40).
+                    path: PATHS.instructorEditarLeccion,
+                    element: <LessonEditorPage />,
+                    children: [
+                      { path: PATHS.instructorNuevaPregunta, element: <QuestionModalPage /> },
+                      { path: PATHS.instructorEditarPregunta, element: <QuestionModalPage /> },
+                    ],
+                  },
                 ],
               },
             ],
