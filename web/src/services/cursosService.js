@@ -27,7 +27,7 @@ import { axiosClient } from '@/api/axiosClient';
  * @property {NivelCurso} nivel
  * @property {EstadoCurso} estado
  * @property {string | null} imagenUrl
- * @property {Array<{ id: number, titulo: string, contenido: string | null, tipo: 'contenido' | 'cuestionario', orden: number, preguntas?: Array<{ id: number, enunciado: string, opciones: string[], indiceCorrecto: number, explicacion: string | null }> }>} lecciones
+ * @property {Array<import('./leccionesService').Leccion & { preguntas: import('./preguntasService').Pregunta[] }>} lecciones
  *
  * @typedef {object} PaginatedResponse<T>
  * @property {T[]} data
