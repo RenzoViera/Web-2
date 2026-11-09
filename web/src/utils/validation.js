@@ -40,6 +40,45 @@ export const minLength = (min, message) => (value) =>
 export const maxLength = (max, message) => (value) => (String(value ?? '').length > max ? message : undefined);
 
 /**
+ * URL http(s) válida (vacío permitido: combinar con `required` si es obligatoria).
+ * @param {string} message
+ * @returns {Rule}
+ */
+export const url = (message) => (value) => {
+  if (isBlank(value)) return undefined;
+  const text = String(value).trim();
+  return URL.canParse(text) && /^https?:\/\//i.test(text) ? undefined : message;
+};
+
+/**
+ * Entero dentro de [min, max] (vacío permitido: combinar con `required` si es obligatorio).
+ * @param {number} min
+ * @param {number} max
+ * @param {string} message
+ * @returns {Rule}
+ */
+export const integerRange = (min, max, message) => (value) => {
+  if (isBlank(value)) return undefined;
+  const number = Number(value);
+  return Number.isInteger(number) && number >= min && number <= max ? undefined : message;
+};
+
+/**
+ * Aplica las reglas solo cuando se cumple la condición (p. ej. campos que dependen de otro).
+ * @param {(values: Record<string, unknown>) => boolean} condition
+ * @param {Rule[]} rules
+ * @returns {Rule}
+ */
+export const when = (condition, rules) => (value, values) => {
+  if (!condition(values)) return undefined;
+  for (const rule of rules) {
+    const message = rule(value, values);
+    if (message) return message;
+  }
+  return undefined;
+};
+
+/**
  * Primer error de un campo según sus reglas.
  * @param {FormRules} rules
  * @param {string} name

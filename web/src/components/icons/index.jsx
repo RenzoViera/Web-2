@@ -179,3 +179,24 @@ export const CheckIcon = (props) => (
   </Icon>
 );
 
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const ArrowUpIcon = (props) => (
+  <Icon {...props}>
+    <path d="m5 12 7-7 7 7M12 19V5" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const ArrowDownIcon = (props) => (
+  <Icon {...props}>
+    <path d="M12 5v14M19 12l-7 7-7-7" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const ListChecksIcon = (props) => (
+  <Icon {...props}>
+    <path d="m3 7 2 2 4-4M3 17l2 2 4-4M13 6h8M13 12h8M13 18h8" />
+  </Icon>
+);

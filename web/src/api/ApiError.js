@@ -23,3 +23,11 @@ export class ApiError extends Error {
     this.requestId = requestId;
   }
 }
+
+/**
+ * Error esperado de la API (4xx de validación o negocio): se muestra con toast o en el estado de la vista.
+ * Lo demás (5xx, red, bugs) se relanza para que lo muestre el manejador global (REGLAS C.34).
+ * @param {unknown} error
+ * @returns {error is ApiError}
+ */
+export const isExpectedApiError = (error) => error instanceof ApiError && error.status < 500;
