@@ -33,9 +33,11 @@ Todas las tablas tienen `id` (`INTEGER`, autoincremental) y `createdAt` / `updat
 |---|---|---|---|---|
 | `cursoId` | `INTEGER` → `cursos.id` | no | | `ON DELETE CASCADE` |
 | `titulo` | `VARCHAR(200)` | no | | |
-| `contenido` | `TEXT` | sí | | |
-| `tipo` | `ENUM('contenido','cuestionario')` | no | `contenido` | |
-| `orden` | `INTEGER` | no | `1` | Posición 1..n dentro del curso. |
+| `contenido` | `TEXT` | sí | | En cuestionarios: instrucciones opcionales. |
+| `videoUrl` | `VARCHAR(500)` | sí | | Solo contenido (paso 05). |
+| `tipo` | `ENUM('contenido','cuestionario')` | no | `contenido` | No editable después de crear. |
+| `orden` | `INTEGER` | no | `1` | Posición 1..n dentro del curso (sin huecos). |
+| `notaMinima` | `INTEGER` | sí | | 0–100, solo cuestionarios (paso 05). |
 
 ### `preguntas` (`Pregunta`)
 
@@ -134,8 +136,6 @@ Cursos: uno publicado (3 lecciones; la 3.ª es un cuestionario de 2 preguntas) y
 
 | Plan | Estado actual | Paso que lo necesita |
 |---|---|---|
-| `lecciones.notaMinima` (`INT`, null; solo cuestionario) | No existe | 05 (editor) · 08 (aprobar) |
-| `lecciones.videoUrl` | No existe | 05 (editor) · 07 (vista de lección) |
 | `inscripciones.completado` | No existe | 07 · 09 (`completaron`) |
 | `progresos` por `inscripcionId` con `intentos` y `mejorNota` | Progreso por `usuarioId` + tabla `intentos_cuestionarios` (intentos = `COUNT`, mejor nota = `MAX(puntaje)`) | 07 · 08 |
 | Seed: 2 instructores, 3 estudiantes, 3 cursos × 5 lecciones | 1 instructor, 2 estudiantes, 2 cursos | 09 (panel con datos) |
