@@ -1,6 +1,8 @@
 import { Op } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Curso, Inscripcion, Leccion, Pregunta, Usuario } from '../models/index.js';
+import { LECCION_ATTRIBUTES } from './leccion.repository.js';
+import { PREGUNTA_EDITOR_ATTRIBUTES } from './pregunta.repository.js';
 
 const CURSO_PUBLIC_ATTRIBUTES = [
   'id',
@@ -98,17 +100,21 @@ export const deleteById = (id) => Curso.destroy({ where: { id } });
 
 /**
  * @param {number} cursoId
+ * @param {{ transaction?: import('sequelize').Transaction }} [options]
  * @returns {Promise<number>}
  */
-export const countInscripciones = (cursoId) =>
-  Inscripcion.count({ where: { cursoId } });
+export const countInscripciones = (cursoId, { transaction } = {}) =>
+  Inscripcion.count({ where: { cursoId }, transaction });
 
 /**
- * @param {number} cursoId
- * @returns {Promise<number>}
+ * Bloquea la fila del curso (`SELECT ... FOR UPDATE`) hasta el fin de la transacción: serializa las operaciones
+ * que recalculan el `orden` de sus lecciones (crear, borrar, reordenar).
+ * @param {number} id
+ * @param {import('sequelize').Transaction} transaction
+ * @returns {Promise<Curso | null>}
  */
-export const countLecciones = (cursoId) =>
-  Leccion.count({ where: { cursoId } });
+export const lockById = (id, transaction) =>
+  Curso.findByPk(id, { attributes: ['id'], lock: transaction.LOCK.UPDATE, transaction });
 
 /**
  * Cursos del instructor con conteos de lecciones e inscritos.
@@ -137,14 +143,14 @@ export const findInstructorCursoById = (id) =>
       {
         model: Leccion,
         as: 'lecciones',
-        attributes: ['id', 'cursoId', 'titulo', 'contenido', 'tipo', 'orden'],
+        attributes: LECCION_ATTRIBUTES,
         separate: true,
         order: [['orden', 'ASC']],
         include: [
           {
             model: Pregunta,
             as: 'preguntas',
-            attributes: ['id', 'leccionId', 'enunciado', 'opciones', 'indiceCorrecto', 'explicacion'],
+            attributes: PREGUNTA_EDITOR_ATTRIBUTES,
             separate: true,
             order: [['id', 'ASC']],
           },
