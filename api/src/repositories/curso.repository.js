@@ -45,6 +45,9 @@ const INSCRITOS_COUNT_LITERAL = [
   'totalInscritos',
 ];
 
+/** Escapa los comodines de LIKE (`%`, `_` y la barra invertida) para buscar el texto tal cual lo escribió el usuario. */
+const escapeLike = (value) => value.replace(/[\\%_]/g, '\\$&');
+
 /**
  * @param {number} id
  * @returns {Promise<Curso | null>}
@@ -170,7 +173,7 @@ export const findPublicados = ({ q, categoria, nivel }, { limit, offset }) => {
   const where = { estado: 'publicado' };
 
   if (q) {
-    where.titulo = { [Op.iLike]: `%${q}%` };
+    where.titulo = { [Op.iLike]: `%${escapeLike(q)}%` };
   }
   if (categoria) {
     where.categoria = categoria;
