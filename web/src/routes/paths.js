@@ -7,6 +7,9 @@ export const PATHS = Object.freeze({
   registro: '/registro',
   perfil: '/perfil',
   catalogo: '/cursos',
+  cursoDetalle: '/cursos/:id',
+  /** Vista de lección del estudiante (página real en el paso 07). */
+  leccion: '/cursos/:cursoId/lecciones/:leccionId',
   misCursos: '/mis-cursos',
   instructorCursos: '/instructor/cursos',
   instructorNuevoCurso: '/instructor/cursos/nuevo',
@@ -17,6 +20,15 @@ export const PATHS = Object.freeze({
   instructorNuevaPregunta: 'preguntas/nueva',
   instructorEditarPregunta: 'preguntas/:preguntaId',
 });
+
+/** @param {number | string} id */
+export const cursoDetallePath = (id) => `/cursos/${id}`;
+
+/**
+ * @param {number | string} cursoId
+ * @param {number | string} leccionId
+ */
+export const leccionPath = (cursoId, leccionId) => `/cursos/${cursoId}/lecciones/${leccionId}`;
 
 /**
  * Genera la ruta para editar un curso.
