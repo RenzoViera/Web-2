@@ -1,27 +1,18 @@
 import { useState } from 'react';
-import { BookOpenIcon, PlusIcon, PresentationIcon, UsersIcon } from '@/components/icons';
+import { CourseCover } from '@/components/cursos/CourseCover';
+import { BookOpenIcon, PlusIcon, UsersIcon } from '@/components/icons';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { LinkButton } from '@/components/ui/LinkButton';
 import { PageLoader } from '@/components/ui/PageLoader';
+import { Pagination } from '@/components/ui/Pagination';
 import { useFetch } from '@/hooks/useFetch';
 import { instructorEditarCursoPath, PATHS } from '@/routes/paths';
 import { cursosService } from '@/services/cursosService';
-
-const ESTADO_BADGES = {
-  borrador: { label: 'Borrador', variant: 'neutral' },
-  publicado: { label: 'Publicado', variant: 'success' },
-  archivado: { label: 'Archivado', variant: 'warning' },
-};
-
-const NIVEL_LABELS = {
-  principiante: 'Principiante',
-  intermedio: 'Intermedio',
-  avanzado: 'Avanzado',
-};
+import { ESTADO_BADGES, nivelLabel } from '@/utils/cursos';
+import { pluralize } from '@/utils/format';
 
 export default function InstructorCoursesPage() {
   const [page, setPage] = useState(1);
@@ -88,10 +79,7 @@ export default function InstructorCoursesPage() {
         <>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {cursos.map((curso) => {
-              const estadoInfo = ESTADO_BADGES[curso.estado] ?? {
-                label: curso.estado,
-                variant: 'neutral',
-              };
+              const estadoInfo = ESTADO_BADGES[curso.estado];
 
               return (
                 <Card
@@ -99,30 +87,13 @@ export default function InstructorCoursesPage() {
                   className="flex flex-col justify-between overflow-hidden border border-border p-0 transition-shadow hover:shadow-md"
                 >
                   <div>
-                    {curso.imagenUrl ? (
-                      <div className="aspect-video w-full overflow-hidden bg-surface-muted">
-                        <img
-                          src={curso.imagenUrl}
-                          alt={curso.titulo}
-                          loading="lazy"
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex aspect-video w-full items-center justify-center bg-surface-muted text-fg-subtle">
-                        <PresentationIcon className="size-12 opacity-40" />
-                      </div>
-                    )}
+                    <CourseCover imagenUrl={curso.imagenUrl} />
 
                     <div className="p-5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant={/** @type {any} */ (estadoInfo.variant)}>
-                          {estadoInfo.label}
-                        </Badge>
+                        <Badge variant={estadoInfo.variant}>{estadoInfo.label}</Badge>
                         <Badge variant="neutral">{curso.categoria}</Badge>
-                        <Badge variant="neutral">
-                          {NIVEL_LABELS[curso.nivel] ?? curso.nivel}
-                        </Badge>
+                        <Badge variant="neutral">{nivelLabel(curso.nivel)}</Badge>
                       </div>
 
                       <h2 className="mt-3 line-clamp-2 text-lg font-semibold text-fg">
@@ -138,13 +109,11 @@ export default function InstructorCoursesPage() {
                       <div className="mt-4 flex items-center gap-4 text-xs text-fg-subtle">
                         <span className="flex items-center gap-1">
                           <BookOpenIcon className="size-4" />
-                          {curso.totalLecciones}{' '}
-                          {curso.totalLecciones === 1 ? 'lección' : 'lecciones'}
+                          {pluralize(curso.totalLecciones, 'lección', 'lecciones')}
                         </span>
                         <span className="flex items-center gap-1">
                           <UsersIcon className="size-4" />
-                          {curso.totalInscritos}{' '}
-                          {curso.totalInscritos === 1 ? 'inscrito' : 'inscritos'}
+                          {pluralize(curso.totalInscritos, 'inscrito', 'inscritos')}
                         </span>
                       </div>
                     </div>
@@ -164,31 +133,7 @@ export default function InstructorCoursesPage() {
             })}
           </div>
 
-          {meta && meta.totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-              <p className="text-sm text-fg-muted">
-                Página {meta.page} de {meta.totalPages} ({meta.total} cursos en total)
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={page >= meta.totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Siguiente
-                </Button>
-              </div>
-            </div>
-          )}
+          {meta && <Pagination meta={meta} onPageChange={setPage} itemLabel={['curso', 'cursos']} className="mt-4" />}
         </>
       )}
     </div>
