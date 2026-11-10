@@ -26,8 +26,9 @@ Cerrar sesión: stateless, el cliente borra el token (no hay endpoint).
 
 | Método | Ruta | Acceso | Descripción | Estado |
 |---|---|---|---|---|
-| GET | `/cursos` | Público | Catálogo publicado con `q`, `categoria`, `nivel`, `page`, `limit` | ✅ Paso 04 |
-| GET | `/cursos/:id` | Público (auth opcional) | Detalle + temario sin contenido (+ `inscrito` en paso 06) | ✅ Paso 04 (base) / ⏳ 06 |
+| GET | `/cursos` | Público | Catálogo publicado con `q` (comodines escapados), `categoria`, `nivel`, `page`, `limit` | ✅ Paso 04 |
+| GET | `/cursos/categorias` | Público | Categorías con cursos publicados (tope 50 + `truncated`) | ✅ Paso 06 |
+| GET | `/cursos/:id` | Público (auth opcional) | Detalle + temario sin contenido + `inscrito` (true/false para estudiantes, `null` para el resto) | ✅ Paso 04 / 06 |
 | POST | `/cursos` | Instructor | Crear curso (siempre `borrador`) | ✅ Paso 04 |
 | PUT | `/cursos/:id` | Instructor dueño | Editar curso (al menos un campo) | ✅ Paso 04 |
 | DELETE | `/cursos/:id` | Instructor dueño | Eliminar (409 `COURSE_HAS_STUDENTS` con inscritos) | ✅ Paso 04 |
@@ -52,8 +53,8 @@ Cerrar sesión: stateless, el cliente borra el token (no hay endpoint).
 
 | Método | Ruta | Acceso | Descripción | Estado |
 |---|---|---|---|---|
-| POST | `/cursos/:id/inscripcion` | Estudiante | Inscribirse (409 duplicada) | ⏳ Paso 06 |
-| GET | `/inscripciones/mias` | Estudiante | Mis cursos con porcentaje | ⏳ Paso 06 |
+| POST | `/cursos/:id/inscripcion` | Estudiante | Inscribirse → 201; 404 si no está publicado; 409 `ALREADY_ENROLLED` | ✅ Paso 06 |
+| GET | `/inscripciones/mias` | Estudiante | Mis cursos (paginado) con conteos, `porcentaje` y `siguienteLeccionId` | ✅ Paso 06 |
 | GET | `/cursos/:id/progreso` | Estudiante inscrito | Estado de cada lección | ⏳ Paso 07 |
 | GET | `/lecciones/:id` | Estudiante inscrito | Contenido (403 `LESSON_LOCKED` si bloqueada) | ⏳ Paso 07 |
 | POST | `/lecciones/:id/completar` | Estudiante inscrito | Marcar lección de contenido como completada | ⏳ Paso 07 |

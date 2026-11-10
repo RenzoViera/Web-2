@@ -86,6 +86,7 @@ router.post('/', validate({ body: crearCursoSchema }), controller.create);
 | Contraseñas | `services/auth.service.js` → `hashPassword`, `verifyPassword` | bcrypt costo 10. Si el email no existe, el login compara igual contra un hash ficticio: tarda lo mismo y no revela qué emails existen. |
 | Token | `services/auth.service.js` → `signToken`, `verifyToken` | JWT HS256 con `{ id, rol }` que expira según `JWT_EXPIRES_IN`. `verifyToken` fija el algoritmo, distingue expirado (`TOKEN_EXPIRED`) de inválido (`INVALID_TOKEN`) y valida la forma del payload con Zod. |
 | `authenticate` | `middlewares/authenticate.js` | `Authorization: Bearer <token>` → `req.user = { id, rol }`. No consulta la BD: el rol no es editable y el token firmado ya lo trae (0 consultas extra por request). Sin header → 401 `UNAUTHORIZED`. |
+| `optionalAuthenticate` | `middlewares/authenticate.js` | Rutas públicas con datos según quién mira (paso 06). Con token válido deja `req.user`; sin token o con uno inválido/vencido sigue como visitante (nunca 401). |
 | `authorize(...roles)` | `middlewares/authorize.js` | Después de `authenticate`; 403 `FORBIDDEN` si el rol no coincide. |
 | `loginRateLimit` | `middlewares/rateLimit.js` | 5 intentos **fallidos** por minuto e IP (los exitosos no cuentan) → 429 `TOO_MANY_REQUESTS` con `Retry-After`. |
 
@@ -104,7 +105,12 @@ cursoRoutes.post('/', authenticate, authorize(ROLES.INSTRUCTOR), validate({ body
 - `usuario.repository.js`: `findById`, `findByEmailWithPassword` (solo login), `findPasswordHash`, `create` (INSERT ... RETURNING) y `update` (UPDATE ... RETURNING, `null` si el usuario no existe).
 - `leccion.repository.js` (paso 05): `findByIdWithCurso`, `findByCurso`, `findIdsByCurso`, `getStatsByCurso` (total, mayor orden y cuestionarios sin preguntas en una consulta), `create`, `update`, `deleteById`, `compactOrden` y `reorder` (un solo `UPDATE` cada uno).
 - `pregunta.repository.js` (paso 05): `findByIdWithCurso`, `countByLeccion`, `create`, `update`, `deleteById`. Columnas del editor (con `indiceCorrecto`).
-- `curso.repository.js`: `findById`, `lockById` (`SELECT ... FOR UPDATE`), `create`, `update`, `updateEstado`, `deleteById`, `countInscripciones`, `findInstructorCursos` (con conteo de lecciones e inscritos por subconsulta SQL sin N+1), `findInstructorCursoById` (con lecciones y preguntas completas para editor), `findPublicados` (solo publicados, búsqueda `q` por ILIKE en título, filtros y paginación) y `findPublicadoById` (con temario público resumido).
+- `curso.repository.js`: `findById`, `findEstadoById`, `lockById` (`SELECT ... FOR UPDATE`), `create`, `update`, `updateEstado`, `deleteById`, `countInscripciones`, `findInstructorCursos` (con conteo de lecciones e inscritos por subconsulta SQL sin N+1), `findInstructorCursoById` (con lecciones y preguntas completas para editor), `findPublicados` (solo publicados, búsqueda `q` por ILIKE en título con `%`/`_` escapados, filtros y paginación), `findPublicadoById` (temario público resumido + `inscrito` por `EXISTS` en la misma consulta) y `findCategoriasPublicadas` (`GROUP BY categoria`).
+- `inscripcion.repository.js` (paso 06): `create` (el UNIQUE rechaza duplicados) y `findByUsuario` (paginado, con curso, instructor y `totalLecciones`, `leccionesCompletadas` y `siguienteLeccionId` por subconsultas correlacionadas: una consulta por página).
+
+## Avance (`services/progreso.service.js`)
+
+`calcularPorcentaje(completadas, total)` → entero 0-100 (0 si el curso no tiene lecciones). Única fórmula del porcentaje: la usan Mis cursos (paso 06), la vista de lección (07) y el panel (09).
 
 ## Middlewares de propiedad (`middlewares/isCourseOwner.js`)
 

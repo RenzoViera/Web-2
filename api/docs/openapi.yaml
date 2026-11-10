@@ -38,6 +38,10 @@ tags:
     description: |
       Preguntas de opción múltiple de un cuestionario (solo el instructor dueño). Las respuestas incluyen
       `indiceCorrecto` porque son del editor; ningún endpoint de estudiante lo devuelve (RN-02).
+  - name: Inscripciones
+    description: |
+      Inscripción del estudiante a cursos publicados (RN-04: una sola por curso) y su listado "Mis cursos"
+      con el porcentaje de avance. Cada estudiante ve solo las propias (RN-08).
 paths:
   /health:
     get:
@@ -303,11 +307,32 @@ paths:
           $ref: '#/components/responses/UnprocessableEntity'
         '500':
           $ref: '#/components/responses/InternalError'
+  /cursos/categorias:
+    get:
+      tags: [Cursos]
+      summary: Categorías con al menos un curso publicado (chips del catálogo)
+      description: Orden alfabético, tope de 50 (`truncated` indica si había más).
+      operationId: getCursosCategorias
+      responses:
+        '200':
+          description: Categorías distintas de los cursos publicados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoriasResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /cursos/{id}:
     get:
       tags: [Cursos]
       summary: Detalle público de un curso publicado con temario resumido
+      description: |
+        Autenticación **opcional**. Con token de estudiante, `inscrito` indica si ya está inscrito; sin token,
+        con token de instructor o con un token inválido/vencido (se atiende como visitante) es `null`.
       operationId: getCursoDetallePublico
+      security:
+        - {}
+        - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/IdParam'
       responses:
@@ -717,6 +742,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /cursos/{id}/inscripcion:
+    post:
+      tags: [Inscripciones]
+      summary: Inscribirse en un curso publicado (solo estudiante)
+      operationId: createInscripcion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '201':
+          description: Inscripción creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inscripcion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: El curso no existe o no está publicado (borrador o archivado)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  status: 404
+                  code: COURSE_NOT_FOUND
+                  message: El curso no existe o no está publicado
+                  details: null
+                  requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+                  timestamp: '2026-11-10T12:00:00.000Z'
+        '409':
+          description: Ya estaba inscrito (RN-04)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  status: 409
+                  code: ALREADY_ENROLLED
+                  message: Ya estás inscrito en este curso
+                  details: null
+                  requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+                  timestamp: '2026-11-10T12:00:00.000Z'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /inscripciones/mias:
+    get:
+      tags: [Inscripciones]
+      summary: Mis cursos con porcentaje de avance (solo estudiante)
+      description: |
+        Solo las inscripciones del usuario del token (RN-08), más recientes primero. Incluye cursos archivados:
+        el estudiante inscrito conserva el acceso. `siguienteLeccionId` es la primera lección sin completar (o la
+        primera si ya completó todas).
+      operationId: getMisInscripciones
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      responses:
+        '200':
+          description: Listado paginado de inscripciones propias
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMisInscripcionesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
   /instructor/cursos:
@@ -1140,6 +1246,11 @@ components:
                 enum: [contenido, cuestionario]
               orden:
                 type: integer
+        inscrito:
+          type: boolean
+          nullable: true
+          description: true/false con token de estudiante; null para visitantes e instructores
+          example: false
         createdAt:
           type: string
           format: date-time
@@ -1377,6 +1488,103 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/InstructorCursoItem'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    CategoriasResponse:
+      type: object
+      required: [data, truncated]
+      properties:
+        data:
+          type: array
+          items:
+            type: string
+          example: [Diseño, Programación]
+        truncated:
+          type: boolean
+          example: false
+    Inscripcion:
+      type: object
+      required: [id, usuarioId, cursoId, createdAt]
+      properties:
+        id:
+          type: integer
+          example: 12
+        usuarioId:
+          type: integer
+          example: 3
+        cursoId:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+    MiInscripcion:
+      type: object
+      required:
+        [id, cursoId, fechaInscripcion, curso, totalLecciones, leccionesCompletadas, porcentaje, siguienteLeccionId]
+      properties:
+        id:
+          type: integer
+          example: 12
+        cursoId:
+          type: integer
+          example: 1
+        fechaInscripcion:
+          type: string
+          format: date-time
+        curso:
+          type: object
+          required: [id, titulo, categoria, nivel, estado, instructor]
+          properties:
+            id:
+              type: integer
+              example: 1
+            titulo:
+              type: string
+              example: Desarrollo Web con Node.js y Express
+            categoria:
+              type: string
+              example: Programación
+            nivel:
+              $ref: '#/components/schemas/NivelCurso'
+            estado:
+              $ref: '#/components/schemas/EstadoCurso'
+            imagenUrl:
+              type: string
+              nullable: true
+            instructor:
+              type: object
+              required: [id, nombre]
+              properties:
+                id:
+                  type: integer
+                nombre:
+                  type: string
+                  example: Ana Instructora
+        totalLecciones:
+          type: integer
+          example: 5
+        leccionesCompletadas:
+          type: integer
+          example: 3
+        porcentaje:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 60
+        siguienteLeccionId:
+          type: integer
+          nullable: true
+          description: Primera lección sin completar (o la primera si completó todas); null si no hay lecciones
+          example: 14
+    PaginatedMisInscripcionesResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MiInscripcion'
         meta:
           $ref: '#/components/schemas/PaginationMeta'
   responses:

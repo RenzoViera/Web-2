@@ -22,7 +22,11 @@ export const listPublic = async (req, res) => {
 };
 
 export const getPublic = async (req, res) => {
-  res.json(await cursoService.obtenerDetallePublico(Number(req.params.id)));
+  res.json(await cursoService.obtenerDetallePublico(Number(req.params.id), req.user));
+};
+
+export const listCategorias = async (_req, res) => {
+  res.json(await cursoService.obtenerCategorias());
 };
 
 export const listInstructor = async (req, res) => {

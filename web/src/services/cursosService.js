@@ -1,4 +1,5 @@
 import { axiosClient } from '@/api/axiosClient';
+import { dedupeRequest } from '@/utils/dedupeRequest';
 
 /**
  * @typedef {'principiante' | 'intermedio' | 'avanzado'} NivelCurso
@@ -18,6 +19,29 @@ import { axiosClient } from '@/api/axiosClient';
  *
  * @typedef {CursoBase & { totalLecciones: number, totalInscritos: number }} InstructorCursoItem
  *
+ * @typedef {{ id: number, nombre: string }} InstructorResumen
+ *
+ * @typedef {CursoBase & { totalLecciones: number, instructor: InstructorResumen }} CursoCatalogo
+ *
+ * @typedef {{ id: number, titulo: string, tipo: import('./leccionesService').TipoLeccion, orden: number }} LeccionTemario
+ *   Lección del temario público: sin contenido, video ni preguntas.
+ *
+ * @typedef {object} CursoDetallePublico
+ * @property {number} id
+ * @property {number} instructorId
+ * @property {string} titulo
+ * @property {string | null} descripcion
+ * @property {string} categoria
+ * @property {NivelCurso} nivel
+ * @property {EstadoCurso} estado
+ * @property {string | null} imagenUrl
+ * @property {string} createdAt
+ * @property {InstructorResumen} instructor
+ * @property {LeccionTemario[]} lecciones
+ * @property {boolean | null} inscrito true/false si consulta un estudiante; null para visitantes e instructores.
+ *
+ * @typedef {{ q?: string, categoria?: string, nivel?: NivelCurso, page?: number, limit?: number }} CatalogoParams
+ *
  * @typedef {object} InstructorCursoDetalle
  * @property {number} id
  * @property {number} instructorId
@@ -28,18 +52,22 @@ import { axiosClient } from '@/api/axiosClient';
  * @property {EstadoCurso} estado
  * @property {string | null} imagenUrl
  * @property {Array<import('./leccionesService').Leccion & { preguntas: import('./preguntasService').Pregunta[] }>} lecciones
- *
- * @typedef {object} PaginatedResponse<T>
+ */
+
+/**
+ * Respuesta de los listados paginados de la API.
+ * @template T
+ * @typedef {object} PaginatedResponse
  * @property {T[]} data
  * @property {{ page: number, limit: number, total: number, totalPages: number }} meta
  */
 
 export const cursosService = {
   /**
-   * Catálogo público de cursos.
-   * @param {{ q?: string, categoria?: string, nivel?: string, page?: number, limit?: number }} [params]
+   * Catálogo público de cursos publicados.
+   * @param {CatalogoParams} [params]
    * @param {{ signal?: AbortSignal }} [options]
-   * @returns {Promise<PaginatedResponse<CursoBase & { totalLecciones: number, instructor: { id: number, nombre: string } }>>}
+   * @returns {Promise<PaginatedResponse<CursoCatalogo>>}
    */
   async getCursos(params = {}, options = {}) {
     const { data } = await axiosClient.get('/cursos', { params, signal: options.signal });
@@ -47,10 +75,18 @@ export const cursosService = {
   },
 
   /**
-   * Detalle público de un curso publicado.
+   * Categorías con cursos publicados (chips del catálogo). Comparte la petición en curso (REGLAS C.28).
+   * @returns {Promise<{ data: string[], truncated: boolean }>}
+   */
+  getCategorias() {
+    return dedupeRequest('GET /cursos/categorias', async () => (await axiosClient.get('/cursos/categorias')).data);
+  },
+
+  /**
+   * Detalle público de un curso publicado. Con sesión de estudiante incluye `inscrito`.
    * @param {number} id
    * @param {{ signal?: AbortSignal }} [options]
-   * @returns {Promise<CursoBase & { instructor: { id: number, nombre: string }, lecciones: Array<{ id: number, titulo: string, tipo: string, orden: number }> }>}
+   * @returns {Promise<CursoDetallePublico>}
    */
   async getCursoDetalle(id, options = {}) {
     const { data } = await axiosClient.get(`/cursos/${id}`, { signal: options.signal });

@@ -12,6 +12,9 @@
 | [pasos/paso-01.md](pasos/paso-01.md) | Registro del paso 01: qué se hizo, cómo probarlo y notas para el siguiente paso |
 | [pasos/paso-02.md](pasos/paso-02.md) | Registro del paso 02: modelo de datos, migraciones, seed y Docker completo |
 | [pasos/paso-03.md](pasos/paso-03.md) | Registro del paso 03: autenticación (API + Web), correcciones por las reglas y notas para el paso 04 |
+| [pasos/paso-04.md](pasos/paso-04.md) | Registro del paso 04: cursos del instructor y catálogo base (API + Web) |
+| [pasos/paso-05.md](pasos/paso-05.md) | Registro del paso 05: lecciones y preguntas del instructor |
+| [pasos/paso-06.md](pasos/paso-06.md) | Registro del paso 06: catálogo, detalle, inscripción y Mis cursos |
 
 Reglas de desarrollo: [../REGLAS.md](../REGLAS.md). Documentación interactiva de la API: `http://localhost:3000/api/docs`.
 

@@ -12,9 +12,11 @@ const VARIANTS = {
   danger: 'bg-danger-soft text-danger font-medium border border-danger/20',
 };
 
+/** @typedef {keyof typeof VARIANTS} BadgeVariant */
+
 /**
  * Etiqueta corta de estado o categoría (rol, estado de un curso…).
- * @param {{ variant?: keyof typeof VARIANTS, children: import('react').ReactNode, className?: string }} props
+ * @param {{ variant?: BadgeVariant, children: import('react').ReactNode, className?: string }} props
  */
 export function Badge({ variant = 'neutral', children, className }) {
   return (

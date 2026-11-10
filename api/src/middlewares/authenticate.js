@@ -12,3 +12,20 @@ export const authenticate = (req, _res, next) => {
   req.user = verifyToken(match[1]);
   next();
 };
+
+/**
+ * Autenticación opcional para rutas públicas que cambian según quién mira (detalle de curso → `inscrito`).
+ * Con token válido deja `req.user`; sin token o con uno inválido/expirado sigue como visitante (nunca 401):
+ * la página pública no debe romperse por una sesión vencida, que el cliente detecta con `GET /users/me`.
+ */
+export const optionalAuthenticate = (req, _res, next) => {
+  const match = BEARER.exec(req.get('Authorization') ?? '');
+  if (match) {
+    try {
+      req.user = verifyToken(match[1]);
+    } catch {
+      req.user = undefined;
+    }
+  }
+  next();
+};

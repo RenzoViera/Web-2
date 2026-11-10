@@ -3,6 +3,10 @@ import * as leccionRepo from '../repositories/leccion.repository.js';
 import { AppError } from '../utils/AppError.js';
 import { ERROR_CODES } from '../utils/errorCodes.js';
 import { buildPaginatedResponse, getPagination } from '../utils/pagination.js';
+import { ROLES } from '../utils/roles.js';
+
+/** Tope de categorías del catálogo (listado no paginado, REGLAS B.26). */
+export const MAX_CATEGORIAS = 50;
 
 /**
  * Crea un curso en estado 'borrador'.
@@ -129,14 +133,26 @@ export const obtenerCatalogo = async (query) => {
 };
 
 /**
- * Detalle público de un curso publicado.
+ * Detalle público de un curso publicado. `inscrito`: true/false si consulta un estudiante; null si es un
+ * visitante o un instructor.
  * @param {number} cursoId
+ * @param {import('./auth.service.js').SessionUser} [usuario] `req.user` de `optionalAuthenticate`.
  * @returns {Promise<object>}
  */
-export const obtenerDetallePublico = async (cursoId) => {
-  const curso = await cursoRepo.findPublicadoById(cursoId);
+export const obtenerDetallePublico = async (cursoId, usuario) => {
+  const estudianteId = usuario?.rol === ROLES.ESTUDIANTE ? usuario.id : null;
+  const curso = await cursoRepo.findPublicadoById(cursoId, { estudianteId });
   if (!curso) {
     throw new AppError(404, ERROR_CODES.NOT_FOUND, 'El curso no existe o no está publicado');
   }
   return curso;
+};
+
+/**
+ * Categorías con al menos un curso publicado.
+ * @returns {Promise<{ data: string[], truncated: boolean }>}
+ */
+export const obtenerCategorias = async () => {
+  const categorias = await cursoRepo.findCategoriasPublicadas(MAX_CATEGORIAS + 1);
+  return { data: categorias.slice(0, MAX_CATEGORIAS), truncated: categorias.length > MAX_CATEGORIAS };
 };

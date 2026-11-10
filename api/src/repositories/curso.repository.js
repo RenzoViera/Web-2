@@ -45,11 +45,21 @@ const INSCRITOS_COUNT_LITERAL = [
   'totalInscritos',
 ];
 
+/** Escapa los comodines de LIKE (`%`, `_` y la barra invertida) para buscar el texto tal cual lo escribió el usuario. */
+const escapeLike = (value) => value.replace(/[\\%_]/g, '\\$&');
+
 /**
  * @param {number} id
  * @returns {Promise<Curso | null>}
  */
 export const findById = (id) => Curso.findByPk(id, { attributes: CURSO_PUBLIC_ATTRIBUTES });
+
+/**
+ * Solo id y estado (p. ej. para validar que acepta inscripciones).
+ * @param {number} id
+ * @returns {Promise<Curso | null>}
+ */
+export const findEstadoById = (id) => Curso.findByPk(id, { attributes: ['id', 'estado'] });
 
 /**
  * @param {{ instructorId: number, titulo: string, descripcion?: string | null, categoria: string, nivel: string, estado: string, imagenUrl?: string | null }} data
@@ -170,7 +180,7 @@ export const findPublicados = ({ q, categoria, nivel }, { limit, offset }) => {
   const where = { estado: 'publicado' };
 
   if (q) {
-    where.titulo = { [Op.iLike]: `%${q}%` };
+    where.titulo = { [Op.iLike]: `%${escapeLike(q)}%` };
   }
   if (categoria) {
     where.categoria = categoria;
@@ -197,14 +207,30 @@ export const findPublicados = ({ q, categoria, nivel }, { limit, offset }) => {
 };
 
 /**
- * Detalle público del curso (solo si publicado): temario resumido (sin contenido, videoUrl ni preguntas).
+ * `inscrito` en la misma consulta del detalle: EXISTS para un estudiante, NULL para visitantes e instructores.
+ * @param {number | null} estudianteId
+ */
+const inscritoAttribute = (estudianteId) => [
+  estudianteId === null
+    ? sequelize.literal('NULL')
+    : sequelize.literal(
+        `EXISTS (SELECT 1 FROM inscripciones i
+                  WHERE i."cursoId" = "Curso"."id" AND i."usuarioId" = ${sequelize.escape(estudianteId)})`,
+      ),
+  'inscrito',
+];
+
+/**
+ * Detalle público del curso (solo si publicado): temario resumido (sin contenido, videoUrl ni preguntas) e
+ * `inscrito` del estudiante que consulta.
  * @param {number} id
+ * @param {{ estudianteId?: number | null }} [options]
  * @returns {Promise<Curso | null>}
  */
-export const findPublicadoById = (id) =>
+export const findPublicadoById = (id, { estudianteId = null } = {}) =>
   Curso.findOne({
     where: { id, estado: 'publicado' },
-    attributes: CURSO_PUBLIC_ATTRIBUTES,
+    attributes: [...CURSO_PUBLIC_ATTRIBUTES, inscritoAttribute(estudianteId)],
     include: [
       {
         model: Usuario,
@@ -220,3 +246,20 @@ export const findPublicadoById = (id) =>
       },
     ],
   });
+
+/**
+ * Categorías distintas de los cursos publicados, en orden alfabético (chips del catálogo).
+ * @param {number} limit Tope duro (el servicio pide uno más para saber si se truncó).
+ * @returns {Promise<string[]>}
+ */
+export const findCategoriasPublicadas = async (limit) => {
+  const rows = await Curso.findAll({
+    where: { estado: 'publicado' },
+    attributes: ['categoria'],
+    group: ['categoria'],
+    order: [['categoria', 'ASC']],
+    limit,
+    raw: true,
+  });
+  return rows.map((row) => row.categoria);
+};
