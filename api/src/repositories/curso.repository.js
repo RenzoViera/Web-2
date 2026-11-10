@@ -55,6 +55,13 @@ const escapeLike = (value) => value.replace(/[\\%_]/g, '\\$&');
 export const findById = (id) => Curso.findByPk(id, { attributes: CURSO_PUBLIC_ATTRIBUTES });
 
 /**
+ * Solo id y estado (p. ej. para validar que acepta inscripciones).
+ * @param {number} id
+ * @returns {Promise<Curso | null>}
+ */
+export const findEstadoById = (id) => Curso.findByPk(id, { attributes: ['id', 'estado'] });
+
+/**
  * @param {{ instructorId: number, titulo: string, descripcion?: string | null, categoria: string, nivel: string, estado: string, imagenUrl?: string | null }} data
  * @returns {Promise<Curso>}
  */
