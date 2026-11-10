@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
 import { BookOpenIcon, PlusIcon, PresentationIcon, UsersIcon } from '@/components/icons';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -25,7 +24,6 @@ const NIVEL_LABELS = {
 };
 
 export default function InstructorCoursesPage() {
-  const navigate = useNavigate();
   const [page, setPage] = useState(1);
 
   const { data, loading, error, refetch } = useFetch(
@@ -79,8 +77,11 @@ export default function InstructorCoursesPage() {
           <EmptyState
             title="Aún no has creado ningún curso"
             description="Comienza creando tu primer curso con lecciones y cuestionarios para tus estudiantes."
-            actionLabel="Crear mi primer curso"
-            onAction={() => navigate(PATHS.instructorNuevoCurso)}
+            action={
+              <LinkButton to={PATHS.instructorNuevoCurso} size="sm">
+                Crear mi primer curso
+              </LinkButton>
+            }
           />
         </Card>
       ) : (
