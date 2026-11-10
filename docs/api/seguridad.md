@@ -15,6 +15,7 @@ Documento vivo (`REGLAS.md` B.13): todo cambio de roles, permisos o reglas de ac
 | Middleware | Responde | Uso |
 |---|---|---|
 | `authenticate` | 401 `UNAUTHORIZED` (sin token) · `INVALID_TOKEN` · `TOKEN_EXPIRED` | Toda ruta privada |
+| `optionalAuthenticate` | Nunca 401: token inválido o vencido → visitante | Rutas públicas que cambian según quién mira (`GET /cursos/:id` → `inscrito`) |
 | `authorize(...roles)` | 403 `FORBIDDEN` | Rutas de un rol (instructor / estudiante) |
 | `isCourseOwner` | 404 `COURSE_NOT_FOUND` · 403 `FORBIDDEN` | Recursos del instructor dueño (RN-07) |
 | `isLeccionOwner` / `isPreguntaOwner` | 404 `LESSON_NOT_FOUND` / `QUESTION_NOT_FOUND` · 403 `FORBIDDEN` | Lecciones y preguntas: resuelven el curso padre en una consulta y usan la misma verificación de dueño |
@@ -29,7 +30,10 @@ Documento vivo (`REGLAS.md` B.13): todo cambio de roles, permisos o reglas de ac
 | `GET /users/me` | 401 | ✅ el propio | ✅ el propio |
 | `PUT /users/me` | 401 | ✅ el propio | ✅ el propio |
 | `GET /cursos` | ✅ solo publicados | ✅ solo publicados | ✅ solo publicados |
-| `GET /cursos/:id` | ✅ solo si publicado | ✅ solo si publicado | ✅ solo si publicado |
+| `GET /cursos/categorias` | ✅ | ✅ | ✅ |
+| `GET /cursos/:id` | ✅ solo si publicado (`inscrito: null`) | ✅ solo si publicado (+ `inscrito`) | ✅ solo si publicado (`inscrito: null`) |
+| `POST /cursos/:id/inscripcion` | 401 | ✅ solo publicados (409 si ya inscrito) | 403 |
+| `GET /inscripciones/mias` | 401 | ✅ solo las propias | 403 |
 | `POST /cursos` | 401 | 403 | ✅ crea borrador |
 | `PUT /cursos/:id` | 401 | 403 | ✅ solo dueño (403 ajeno) |
 | `DELETE /cursos/:id` | 401 | 403 | ✅ solo dueño (409 con inscritos) |
@@ -62,3 +66,7 @@ El resto de los endpoints y su acceso previsto están en [endpoints.md](endpoint
 13. Un curso publicado siempre tiene ≥ 1 lección y todos sus cuestionarios ≥ 1 pregunta: se valida al publicar (422 `QUIZ_WITHOUT_QUESTIONS`) y al borrar (422 `PUBLISHED_COURSE_NEEDS_LESSON` / `QUIZ_WITHOUT_QUESTIONS`).
 14. No se borran lecciones de un curso con inscritos (409 `COURSE_HAS_STUDENTS`): rompería su progreso (§6 del plan).
 15. El `orden` de las lecciones es siempre 1..n: crear, borrar y reordenar bloquean la fila del curso (`SELECT ... FOR UPDATE`) dentro de una transacción.
+16. Un estudiante se inscribe una sola vez por curso (RN-04): índice UNIQUE `(usuarioId, cursoId)` → 409 `ALREADY_ENROLLED`. Solo se aceptan inscripciones a cursos publicados (404 en borrador o archivado).
+17. Cada estudiante ve solo sus inscripciones (RN-08): `GET /inscripciones/mias` filtra por `req.user.id`, nunca por un id del cliente. El detalle público calcula `inscrito` con el id del token.
+18. Un curso archivado sigue visible en Mis cursos para quien ya estaba inscrito (§6 del plan); no aparece en el catálogo ni acepta inscripciones nuevas.
+19. Inscribirse y borrar una lección no se pisan: el INSERT de la inscripción toma `FOR KEY SHARE` sobre el curso (FK), que espera al `FOR UPDATE` del borrado; así el conteo de inscritos del borrado es fiel (invariante 14).

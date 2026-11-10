@@ -6,17 +6,19 @@
 |---|---|
 | `config/env.js` | Lee y valida `VITE_API_URL` (la app no arranca sin ella). |
 | `api/` | `axiosClient.js` (instancia única: token, normalización de errores y 401) y `ApiError.js`. |
-| `services/` | Una función por endpoint, por dominio (`authService`; `cursosService`... en sus pasos). **Único lugar que usa `axiosClient`.** |
+| `services/` | Una función por endpoint, por dominio (`authService`, `cursosService`, `leccionesService`, `preguntasService`, `inscripcionesService`). **Único lugar que usa `axiosClient`.** |
 | `context/` | `AuthContext` + `AuthProvider` (sesión) y `ToastContext` + `ToastProvider` (notificaciones). Contexto y provider van en archivos separados (Fast Refresh solo admite componentes en un `.jsx`). |
-| `hooks/` | `useAuth`, `useToast`, `useAppForm`, `useDismiss`, `useCopyToClipboard` (+ `useFetch`, `useProgreso` en sus pasos). |
+| `hooks/` | `useAuth`, `useToast`, `useAppForm`, `useDismiss`, `useCopyToClipboard`, `useFetch`, `useDebouncedCallback` (+ `useProgreso` en el paso 07). |
 | `routes/` | `AppRouter.jsx`, `paths.js`, `ProtectedRoute`, `RoleRoute`, `GuestRoute`, `redirectState.js`. |
-| `components/ui/` | `Button`, `LinkButton`, `TextLink`, `Input`, `Textarea`, `PasswordInput`, `RadioCardGroup`, `Select`, `Alert`, `Avatar`, `Badge`, `Card`, `Modal`, `ConfirmDialog`, `Toaster`, `Spinner`, `PageLoader`, `ErrorMessage`, `EmptyState`. |
+| `components/ui/` | `Button`, `LinkButton`, `TextLink`, `Input`, `Textarea`, `PasswordInput`, `RadioCardGroup`, `Select`, `Alert`, `Avatar`, `Badge`, `Card`, `Modal`, `ConfirmDialog`, `Toaster`, `Spinner`, `PageLoader`, `ErrorMessage`, `EmptyState`, `Pagination`, `ProgressBar`. |
+| `components/cursos/` | Piezas de curso compartidas: `CourseCover`, `CourseCard`, `CategoryFilter`, `CourseSyllabus` (paso 06). |
+| `components/student/` | Piezas de las pantallas del estudiante: `EnrolledCourseCard` (paso 06). |
 | `components/instructor/` | Piezas de las pantallas del instructor: `LessonList`, `LessonForm`, `QuestionList`, `QuestionForm` (paso 05). |
 | `components/layout/` | `Layout`, `Navbar`, `UserMenu`, `UserSummary`, `GuestActions`, `NavItemLink`, `AuthCard`, `Logo`, `Footer`, `navItems.js`. |
 | `components/errors/` | `ErrorBoundary`, `RouteErrorBoundary`, `GlobalErrorListener`, `ErrorReportView`. |
 | `components/icons/` | Íconos SVG propios (sin librerías). |
 | `pages/public | account | student | instructor/` | Páginas por acceso (export default para `React.lazy`). `account/`: páginas de cualquier usuario con sesión, sin importar el rol (perfil). |
-| `utils/` | `cn`, `errorReport`, `authStorage`, `dedupeRequest`, `validation`, `roles`, `names`, `format`. |
+| `utils/` | `cn`, `errorReport`, `authStorage`, `dedupeRequest`, `validation`, `roles`, `names`, `format` (`formatDate`, `pluralize`), `cursos` (`NIVEL_LABELS`, `ESTADO_BADGES`). |
 
 Convenciones: componentes con export nombrado; páginas con export default; imports con alias `@/` (configurado en `vite.config.js` y `jsconfig.json`). Contratos con JSDoc y `checkJs` (se puede verificar con `npx -p typescript tsc --noEmit -p jsconfig.json`).
 
@@ -111,6 +113,14 @@ Tailwind v4 con `@theme`. Los componentes usan solo clases semánticas:
 - **Avatar** (iniciales, `sm | md | lg`), **Badge** (`neutral | primary`; antes de sumar variantes de color, verificar contraste AA: success/warning/danger sobre su `-soft` no llegan a 4.5:1), **Card** (`as="section"` opcional).
 - **Spinner** (`sm | md | lg`, `decorative` para usar dentro de botones), **PageLoader** (fallback de rutas lazy).
 - **ErrorMessage** (`title`, `message`, `onRetry`) y **EmptyState** (`title`, `description`, `action`, `icon`): estados de error y vacío de cualquier vista remota.
+- **Pagination** (`meta` de la API, `onPageChange`, `itemLabel: [singular, plural]`): Anterior/Siguiente + "Página X de Y · N cursos"; no se muestra con una sola página.
+- **ProgressBar** (`value` 0-100, `label` accesible, `size: sm | md`): `role="progressbar"`; el ancho va en la variable CSS `--progress` (clase `w-(--progress)`, sin estilos inline de valor fijo). Al 100 % se pinta en verde.
+
+## Catálogo y Mis cursos (paso 06)
+
+- **Catálogo** (`pages/public/CatalogPage`): los filtros viven en la URL (`?q=&categoria=&page=`, `useSearchParams`). El buscador escribe en la URL con `useDebouncedCallback` (300 ms, `replace`) y se resincroniza si la URL cambia desde afuera (atrás/adelante). Cambiar un filtro vuelve a la página 1 sin mover el scroll; paginar sí sube. Las categorías son una sección independiente (`GET /cursos/categorias`, petición compartida con `dedupeRequest`) con su propia carga y error. Mientras carga un filtro nuevo no se muestran resultados viejos.
+- **Detalle** (`pages/public/CourseDetailPage`): la acción depende de quién mira (visitante → login con `state.from` para volver; estudiante → Inscribirme / Ir al curso; instructor → aviso). Inscribirse hace 1 request y actualiza el estado local (sin recargar el detalle); un 409 `ALREADY_ENROLLED` se toma como inscrito.
+- **Mis cursos** (`pages/student/MyCoursesPage`): `EnrolledCourseCard` con avance y botón Empezar (0 %) / Continuar / Repasar (100 %) a `siguienteLeccionId`. Los cursos archivados muestran su badge.
 
 ## Layout y navegación
 
@@ -132,14 +142,16 @@ Tailwind v4 con `@theme`. Los componentes usan solo clases semánticas:
 Layout (errorElement: pantalla completa)
 └─ grupo (errorElement: dentro del layout, la navbar sigue visible)
    ├─ /                     HomePage
-   ├─ /cursos               ComingSoonPage (catálogo, paso 06)
+   ├─ /cursos               CatalogPage
+   ├─ /cursos/:id           CourseDetailPage
    ├─ GuestRoute
    │  ├─ /login             LoginPage
    │  └─ /registro          RegisterPage
    ├─ ProtectedRoute
    │  ├─ /perfil            ProfilePage
    │  ├─ RoleRoute estudiante
-   │  │  └─ /mis-cursos     ComingSoonPage (paso 06)
+   │  │  ├─ /mis-cursos     MyCoursesPage
+   │  │  └─ /cursos/:cursoId/lecciones/:leccionId   ComingSoonPage (vista de lección, paso 07)
    │  └─ RoleRoute instructor
    │     ├─ /instructor/cursos                              InstructorCoursesPage
    │     ├─ /instructor/cursos/nuevo · /:id/editar          CourseEditorPage (temario con LessonList)
@@ -166,7 +178,7 @@ Los errores esperados (validación, 4xx de negocio) **no** usan este aviso: se m
 
 ## Pendientes de frontend para próximos pasos
 
-- Reemplazar `ComingSoonPage` por las páginas reales: catálogo y mis cursos (paso 06).
+- Reemplazar `ComingSoonPage` de `/cursos/:cursoId/lecciones/:leccionId` por la vista de lección (paso 07). Mis cursos y el detalle ya enlazan ahí (`leccionPath`).
 - Modal con URL propia (C.40): patrón de referencia en `LessonEditorPage` + `QuestionModalPage` (ruta hija, `<Suspense>` alrededor del `<Outlet />` para no tapar la página al cargar el modal lazy, cerrar con `navigate(-1)` o al padre si `location.key === 'default'`).
 
 ## Scripts (`web/package.json`)
