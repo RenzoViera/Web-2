@@ -52,8 +52,12 @@ import { dedupeRequest } from '@/utils/dedupeRequest';
  * @property {EstadoCurso} estado
  * @property {string | null} imagenUrl
  * @property {Array<import('./leccionesService').Leccion & { preguntas: import('./preguntasService').Pregunta[] }>} lecciones
- *
- * @typedef {object} PaginatedResponse<T>
+ */
+
+/**
+ * Respuesta de los listados paginados de la API.
+ * @template T
+ * @typedef {object} PaginatedResponse
  * @property {T[]} data
  * @property {{ page: number, limit: number, total: number, totalPages: number }} meta
  */
