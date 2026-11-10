@@ -10,6 +10,8 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { RoleRoute } from './RoleRoute';
 
 const HomePage = lazy(() => import('@/pages/public/HomePage'));
+const CatalogPage = lazy(() => import('@/pages/public/CatalogPage'));
+const CourseDetailPage = lazy(() => import('@/pages/public/CourseDetailPage'));
 const LoginPage = lazy(() => import('@/pages/public/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/public/RegisterPage'));
 const ProfilePage = lazy(() => import('@/pages/account/ProfilePage'));
@@ -19,10 +21,11 @@ const InstructorCoursesPage = lazy(() => import('@/pages/instructor/InstructorCo
 const CourseEditorPage = lazy(() => import('@/pages/instructor/CourseEditorPage'));
 const LessonEditorPage = lazy(() => import('@/pages/instructor/LessonEditorPage'));
 const QuestionModalPage = lazy(() => import('@/pages/instructor/QuestionModalPage'));
+const MyCoursesPage = lazy(() => import('@/pages/student/MyCoursesPage'));
 
 /*
- * Pendiente: páginas reales del instructor (09) y del estudiante (06, 07, 08); reemplazan a ComingSoonPage
- * o se suman como hijas del RoleRoute de su rol.
+ * Pendiente: vista de lección (07, hoy ComingSoonPage), cuestionario (08) y panel del instructor (09);
+ * reemplazan a ComingSoonPage o se suman como hijas del RoleRoute de su rol.
  */
 const router = createBrowserRouter([
   {
@@ -34,7 +37,8 @@ const router = createBrowserRouter([
         errorElement: <RouteErrorBoundary />,
         children: [
           { path: PATHS.home, element: <HomePage /> },
-          { path: PATHS.catalogo, element: <ComingSoonPage title="Catálogo de cursos" /> },
+          { path: PATHS.catalogo, element: <CatalogPage /> },
+          { path: PATHS.cursoDetalle, element: <CourseDetailPage /> },
           {
             element: <GuestRoute />,
             children: [
@@ -48,7 +52,10 @@ const router = createBrowserRouter([
               { path: PATHS.perfil, element: <ProfilePage /> },
               {
                 element: <RoleRoute roles={[ROLES.ESTUDIANTE]} />,
-                children: [{ path: PATHS.misCursos, element: <ComingSoonPage title="Mis cursos" /> }],
+                children: [
+                  { path: PATHS.misCursos, element: <MyCoursesPage /> },
+                  { path: PATHS.leccion, element: <ComingSoonPage title="Lección" /> },
+                ],
               },
               {
                 element: <RoleRoute roles={[ROLES.INSTRUCTOR]} />,
