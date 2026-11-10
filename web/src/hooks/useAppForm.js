@@ -66,7 +66,9 @@ export const useAppForm = ({ defaultValues, rules }) => {
       /** @type {Map<string, string>} */
       const fieldMessages = new Map();
       for (const { field, message } of error.details ?? []) {
-        if (field && fieldNames.has(field) && !fieldMessages.has(field)) fieldMessages.set(field, message);
+        // Campos anidados (`opciones.1`) se muestran en su campo raíz (`opciones`).
+        const name = field && (fieldNames.has(field) ? field : field.split('.')[0]);
+        if (name && fieldNames.has(name) && !fieldMessages.has(name)) fieldMessages.set(name, message);
       }
       if (fieldMessages.size === 0) {
         setFormError(error.message);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { LessonList } from '@/components/instructor/LessonList';
 import { ArrowLeftIcon, BookOpenIcon, TrashIcon } from '@/components/icons';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
@@ -11,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { LinkButton } from '@/components/ui/LinkButton';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
 import { useAppForm } from '@/hooks/useAppForm';
 import { useToast } from '@/hooks/useToast';
 import { PATHS } from '@/routes/paths';
@@ -49,7 +51,7 @@ export default function CourseEditorPage() {
   const cursoId = Number(id);
 
   const navigate = useNavigate();
-  const { showToast } = useToast();
+  const toast = useToast();
 
   const [curso, setCurso] = useState(/** @type {import('@/services/cursosService').InstructorCursoDetalle | null} */ (null));
   const [loadingCurso, setLoadingCurso] = useState(isEditing);
@@ -61,7 +63,13 @@ export default function CourseEditorPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const { register, setFieldValue, submit, formError, isSubmitting, reset } = useAppForm({
+  const {
+    register,
+    submit,
+    formError,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useAppForm({
     defaultValues: {
       titulo: '',
       descripcion: '',
@@ -110,10 +118,10 @@ export default function CourseEditorPage() {
     if (isEditing) {
       const actualizado = await cursosService.actualizarCurso(cursoId, payload);
       setCurso((prev) => (prev ? { ...prev, ...actualizado } : null));
-      showToast('Curso actualizado con éxito', { variant: 'success' });
+      toast.success('Curso actualizado con éxito');
     } else {
       const nuevo = await cursosService.crearCurso(payload);
-      showToast('Curso creado en estado borrador', { variant: 'success' });
+      toast.success('Curso creado en estado borrador');
       navigate(`/instructor/cursos/${nuevo.id}/editar`, { replace: true });
     }
   });
@@ -125,11 +133,11 @@ export default function CourseEditorPage() {
       const actualizado = await cursosService.cambiarEstadoCurso(cursoId, nuevoEstado);
       setCurso((prev) => (prev ? { ...prev, estado: actualizado.estado } : null));
       const estadoLabel = nuevoEstado === 'publicado' ? 'publicado' : nuevoEstado === 'archivado' ? 'archivado' : 'en borrador';
-      showToast(`El curso ahora está ${estadoLabel}`, { variant: 'success' });
+      toast.success(`El curso ahora está ${estadoLabel}`);
     } catch (err) {
       const msg = /** @type {any} */ (err).message || 'No se pudo cambiar el estado del curso';
       setActionError(msg);
-      showToast(msg, { variant: 'danger' });
+      toast.error(msg);
     } finally {
       setActionLoading(false);
     }
@@ -141,12 +149,12 @@ export default function CourseEditorPage() {
     try {
       await cursosService.eliminarCurso(cursoId);
       setShowDeleteDialog(false);
-      showToast('Curso eliminado correctamente', { variant: 'success' });
+      toast.success('Curso eliminado correctamente');
       navigate(PATHS.instructorCursos);
     } catch (err) {
       const msg = /** @type {any} */ (err).message || 'No se pudo eliminar el curso';
       setActionError(msg);
-      showToast(msg, { variant: 'danger' });
+      toast.error(msg);
       setShowDeleteDialog(false);
     } finally {
       setDeleteLoading(false);
@@ -174,7 +182,7 @@ export default function CourseEditorPage() {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <LinkButton to={PATHS.instructorCursos} variant="outline" size="sm">
+          <LinkButton to={PATHS.instructorCursos} variant="secondary" size="sm">
             <ArrowLeftIcon className="size-4" />
             Volver a mis cursos
           </LinkButton>
@@ -200,7 +208,7 @@ export default function CourseEditorPage() {
             {curso?.estado === 'publicado' && (
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 loading={actionLoading}
                 onClick={() => handleCambiarEstado('archivado')}
               >
@@ -210,7 +218,7 @@ export default function CourseEditorPage() {
             {curso?.estado === 'archivado' && (
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 loading={actionLoading}
                 onClick={() => handleCambiarEstado('borrador')}
               >
@@ -244,14 +252,15 @@ export default function CourseEditorPage() {
               </p>
             </div>
 
-            {formError && <Alert variant="danger">{formError}</Alert>}
-            {actionError && <Alert variant="danger">{actionError}</Alert>}
+            {formError && <Alert variant="error">{formError}</Alert>}
+            {actionError && <Alert variant="error">{actionError}</Alert>}
 
             <form onSubmit={handleSave} className="flex flex-col gap-4">
               <Input
                 label="Título del curso"
                 required
                 placeholder="Ej. Programación Frontend con React"
+                error={errors.titulo?.message}
                 {...register('titulo')}
               />
 
@@ -260,6 +269,7 @@ export default function CourseEditorPage() {
                   label="Categoría"
                   required
                   placeholder="Ej. Desarrollo Web"
+                  error={errors.categoria?.message}
                   {...register('categoria')}
                 />
 
@@ -272,34 +282,25 @@ export default function CourseEditorPage() {
                 />
               </div>
 
-              <div>
-                <label htmlFor="descripcion" className="mb-1.5 block text-sm font-medium text-fg">
-                  Descripción
-                </label>
-                <textarea
-                  id="descripcion"
-                  rows={4}
-                  placeholder="Describe de qué trata el curso, a quién va dirigido y qué aprenderán los estudiantes..."
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-primary focus:ring-2 focus:ring-ring/20 focus:outline-none"
-                  {...register('descripcion')}
-                  onChange={(e) => {
-                    register('descripcion').onChange(e);
-                    setFieldValue('descripcion', e.target.value);
-                  }}
-                />
-              </div>
+              <Textarea
+                label="Descripción"
+                placeholder="Describe de qué trata el curso, a quién va dirigido y qué aprenderán los estudiantes..."
+                error={errors.descripcion?.message}
+                {...register('descripcion')}
+              />
 
               <Input
                 label="URL de imagen de portada (opcional)"
                 type="url"
                 placeholder="https://ejemplo.com/imagen.jpg"
+                error={errors.imagenUrl?.message}
                 {...register('imagenUrl')}
               />
 
               <div className="mt-2 flex justify-end gap-3 border-t border-border pt-4">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => navigate(PATHS.instructorCursos)}
                 >
                   Cancelar
@@ -312,7 +313,7 @@ export default function CourseEditorPage() {
           </Card>
         </div>
 
-        {/* Sección de Lecciones (Placeholder para Paso 05) */}
+        {/* Temario: agregar, editar, eliminar y reordenar lecciones */}
         <div>
           <Card className="flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
@@ -327,42 +328,16 @@ export default function CourseEditorPage() {
               )}
             </div>
 
-            {!isEditing ? (
+            {isEditing && curso ? (
+              <LessonList
+                cursoId={cursoId}
+                lecciones={lecciones}
+                onChange={(nuevas) => setCurso((prev) => (prev ? { ...prev, lecciones: nuevas } : prev))}
+              />
+            ) : (
               <p className="py-6 text-center text-sm text-fg-muted">
                 Primero crea el curso para poder comenzar a redactar y ordenar las lecciones.
               </p>
-            ) : lecciones.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <p className="text-sm font-medium text-fg">Aún no hay lecciones agregadas</p>
-                <p className="text-xs text-fg-muted">
-                  Recuerda: Para poder publicar el curso debes contar con al menos una lección (RN-05).
-                </p>
-                <div className="mt-3 rounded-lg border border-dashed border-border bg-surface-muted p-3 text-xs text-fg-subtle">
-                  📌 En el <strong>Paso 05</strong> se habilitará el editor y reordenamiento de lecciones y preguntas.
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <div className="mb-2 rounded-lg border border-border bg-surface-muted/60 p-2 text-xs text-fg-subtle">
-                  📌 En el <strong>Paso 05</strong> podrás agregar, editar y reordenar lecciones.
-                </div>
-                {lecciones.map((leccion) => (
-                  <div
-                    key={leccion.id}
-                    className="flex items-center justify-between rounded-lg border border-border bg-surface p-3 text-sm"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-muted text-xs font-semibold text-fg-muted">
-                        {leccion.orden}
-                      </span>
-                      <span className="truncate font-medium text-fg">{leccion.titulo}</span>
-                    </div>
-                    <Badge variant={leccion.tipo === 'cuestionario' ? 'primary' : 'neutral'}>
-                      {leccion.tipo === 'cuestionario' ? 'Cuestionario' : 'Contenido'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
             )}
           </Card>
         </div>

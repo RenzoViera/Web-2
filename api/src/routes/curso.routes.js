@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as cursoController from '../controllers/curso.controller.js';
+import * as leccionController from '../controllers/leccion.controller.js';
 import { authenticate } from '../middlewares/authenticate.js';
 import { authorize } from '../middlewares/authorize.js';
 import { isCourseOwner } from '../middlewares/isCourseOwner.js';
@@ -12,6 +13,7 @@ import {
   createCursoSchema,
   updateCursoSchema,
 } from '../validators/curso.validator.js';
+import { createLeccionSchema, reordenarLeccionesSchema } from '../validators/leccion.validator.js';
 
 export const cursoRoutes = Router();
 
@@ -55,4 +57,25 @@ cursoRoutes.patch(
   isCourseOwner,
   validate({ body: changeEstadoSchema }),
   cursoController.changeEstado,
+);
+
+// Lecciones del curso (paso 05)
+cursoRoutes.post(
+  '/:id/lecciones',
+  authenticate,
+  authorize(ROLES.INSTRUCTOR),
+  validate({ params: idParamSchema }),
+  isCourseOwner,
+  validate({ body: createLeccionSchema }),
+  leccionController.create,
+);
+
+cursoRoutes.patch(
+  '/:id/lecciones/orden',
+  authenticate,
+  authorize(ROLES.INSTRUCTOR),
+  validate({ params: idParamSchema }),
+  isCourseOwner,
+  validate({ body: reordenarLeccionesSchema }),
+  leccionController.reorder,
 );

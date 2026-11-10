@@ -10,7 +10,8 @@
 | `context/` | `AuthContext` + `AuthProvider` (sesión) y `ToastContext` + `ToastProvider` (notificaciones). Contexto y provider van en archivos separados (Fast Refresh solo admite componentes en un `.jsx`). |
 | `hooks/` | `useAuth`, `useToast`, `useAppForm`, `useDismiss`, `useCopyToClipboard` (+ `useFetch`, `useProgreso` en sus pasos). |
 | `routes/` | `AppRouter.jsx`, `paths.js`, `ProtectedRoute`, `RoleRoute`, `GuestRoute`, `redirectState.js`. |
-| `components/ui/` | `Button`, `LinkButton`, `TextLink`, `Input`, `PasswordInput`, `RadioCardGroup`, `Alert`, `Avatar`, `Badge`, `Card`, `Toaster`, `Spinner`, `PageLoader`, `ErrorMessage`, `EmptyState`. |
+| `components/ui/` | `Button`, `LinkButton`, `TextLink`, `Input`, `Textarea`, `PasswordInput`, `RadioCardGroup`, `Select`, `Alert`, `Avatar`, `Badge`, `Card`, `Modal`, `ConfirmDialog`, `Toaster`, `Spinner`, `PageLoader`, `ErrorMessage`, `EmptyState`. |
+| `components/instructor/` | Piezas de las pantallas del instructor: `LessonList`, `LessonForm`, `QuestionList`, `QuestionForm` (paso 05). |
 | `components/layout/` | `Layout`, `Navbar`, `UserMenu`, `UserSummary`, `GuestActions`, `NavItemLink`, `AuthCard`, `Logo`, `Footer`, `navItems.js`. |
 | `components/errors/` | `ErrorBoundary`, `RouteErrorBoundary`, `GlobalErrorListener`, `ErrorReportView`. |
 | `components/icons/` | Íconos SVG propios (sin librerías). |
@@ -101,6 +102,8 @@ Tailwind v4 con `@theme`. Los componentes usan solo clases semánticas:
 
 - **Button**: variantes `primary | secondary | ghost | danger | menu` (ítem de menú alineado a la izquierda), tamaños `sm | md | lg | icon | iconSm`, `fullWidth`. Hover, active (`scale-[0.97]`) y loading integrados: con `loading` o si `onClick` devuelve una promesa muestra spinner, queda `disabled` + `aria-busy` y mantiene el ancho (no hay doble envío). Acepta `ref`. Estilos compartidos en `buttonStyles.js`.
 - **LinkButton**: `Link` de React Router con las mismas variantes. **TextLink**: enlace dentro de un texto.
+- **Textarea**: misma API que `Input` (`label`, `error`, `hint`, `required`, `rows`).
+- **Modal** (`title`, `description`, `onClose`, `closeDisabled`, `size: md | lg`, `footer`): portal al body, foco atrapado (prioriza `[data-autofocus]`), Escape y clic en el fondo cierran, devuelve el foco al cerrar y bloquea el scroll. En móvil es una hoja inferior.
 - **Input**: `label` obligatorio, `error`, `hint`, `required` (asterisco + `aria-required`), `end` (contenido a la derecha dentro del campo); `aria-invalid` + `aria-describedby`; compatible con `register()` (en React 19 `ref` es una prop).
 - **PasswordInput**: `Input` con botón mostrar/ocultar (`aria-pressed`; con el mouse no le quita el foco al campo, así no dispara la validación).
 - **RadioCardGroup**: opciones excluyentes como tarjetas (`legend`, `options: { value, label, description, icon }`, `error`, `hint`). Son radios nativos ocultos dentro de un `radiogroup`: teclado y lector de pantalla funcionan igual. Se le esparce `register('campo')`. Usado para elegir el rol al registrarse.
@@ -138,7 +141,12 @@ Layout (errorElement: pantalla completa)
    │  ├─ RoleRoute estudiante
    │  │  └─ /mis-cursos     ComingSoonPage (paso 06)
    │  └─ RoleRoute instructor
-   │     └─ /instructor/cursos  ComingSoonPage (paso 04)
+   │     ├─ /instructor/cursos                              InstructorCoursesPage
+   │     ├─ /instructor/cursos/nuevo · /:id/editar          CourseEditorPage (temario con LessonList)
+   │     ├─ /instructor/cursos/:cursoId/lecciones/nueva     LessonEditorPage
+   │     └─ /instructor/cursos/:cursoId/lecciones/:leccionId/editar   LessonEditorPage (<Outlet />)
+   │        ├─ preguntas/nueva                             QuestionModalPage (modal)
+   │        └─ preguntas/:preguntaId                       QuestionModalPage (modal)
    └─ *                     NotFoundPage
 ```
 
@@ -158,10 +166,8 @@ Los errores esperados (validación, 4xx de negocio) **no** usan este aviso: se m
 
 ## Pendientes de frontend para próximos pasos
 
-- `ConfirmDialog`/`Modal` propios (`REGLAS.md` C.11): crearlos en el primer paso que los necesite (paso 04: eliminar curso). El `Modal` también sirve para ver o editar registros simples desde un listado, con URL propia (C.40; p. ej. las preguntas del paso 05).
-- Select propio accesible (`REGLAS.md` C.37) para categoría y nivel (paso 04). El rol no lo usa: se elige con `RadioCardGroup`.
-- Variantes de `Badge` para el estado del curso (paso 04), con contraste AA.
-- Reemplazar `ComingSoonPage` por las páginas reales: cursos del instructor (paso 04), catálogo y mis cursos (paso 06).
+- Reemplazar `ComingSoonPage` por las páginas reales: catálogo y mis cursos (paso 06).
+- Modal con URL propia (C.40): patrón de referencia en `LessonEditorPage` + `QuestionModalPage` (ruta hija, `<Suspense>` alrededor del `<Outlet />` para no tapar la página al cargar el modal lazy, cerrar con `navigate(-1)` o al padre si `location.key === 'default'`).
 
 ## Scripts (`web/package.json`)
 

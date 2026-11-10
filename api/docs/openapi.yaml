@@ -30,6 +30,14 @@ tags:
     description: Catálogo público y gestión de cursos
   - name: Instructor
     description: Gestión de cursos y contenidos para instructores
+  - name: Lecciones
+    description: |
+      Temario del curso (solo el instructor dueño). El `orden` va de 1 a n sin huecos: crear agrega al final,
+      borrar recompacta y reordenar recibe la lista completa. El tipo de una lección no se puede cambiar.
+  - name: Preguntas
+    description: |
+      Preguntas de opción múltiple de un cuestionario (solo el instructor dueño). Las respuestas incluyen
+      `indiceCorrecto` porque son del editor; ningún endpoint de estudiante lo devuelve (RN-02).
 paths:
   /health:
     get:
@@ -406,7 +414,305 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
-          description: Error al publicar (p. ej. el curso no tiene lecciones)
+          description: |
+            No se puede publicar: el curso no tiene lecciones (`COURSE_CANNOT_PUBLISH_EMPTY`) o tiene
+            cuestionarios sin preguntas (`QUIZ_WITHOUT_QUESTIONS`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /cursos/{id}/lecciones:
+    post:
+      tags: [Lecciones]
+      summary: Crear lección al final del temario (orden = último + 1)
+      operationId: createLeccion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeccionRequest'
+            examples:
+              contenido:
+                summary: Lección de contenido
+                value:
+                  tipo: contenido
+                  titulo: Variables y tipos de datos
+                  contenido: En JavaScript las variables se declaran con let y const...
+                  videoUrl: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+              cuestionario:
+                summary: Cuestionario
+                value:
+                  tipo: cuestionario
+                  titulo: Evaluación del módulo 1
+                  notaMinima: 70
+      responses:
+        '201':
+          description: Lección creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leccion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validación (`VALIDATION_ERROR`) o el curso llegó al máximo de 50 lecciones (`LESSON_LIMIT_REACHED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /cursos/{id}/lecciones/orden:
+    patch:
+      tags: [Lecciones]
+      summary: Reordenar el temario completo (en una transacción)
+      operationId: reorderLecciones
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReordenarLeccionesRequest'
+      responses:
+        '200':
+          description: Lecciones del curso en el orden nuevo (sin preguntas)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Leccion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: |
+            Validación (`VALIDATION_ERROR`, p. ej. ids repetidos) o la lista no contiene exactamente todas
+            las lecciones del curso (`LESSON_ORDER_MISMATCH`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  status: 422
+                  code: LESSON_ORDER_MISMATCH
+                  message: La lista debe incluir exactamente todas las lecciones del curso. Recarga la página e inténtalo de nuevo.
+                  details: null
+                  requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+                  timestamp: '2026-11-09T12:00:00.000Z'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /lecciones/{id}:
+    put:
+      tags: [Lecciones]
+      summary: Editar lección (al menos un campo; el tipo no se edita)
+      operationId: updateLeccion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLeccionRequest'
+      responses:
+        '200':
+          description: Lección actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leccion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La lección no existe (`LESSON_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: |
+            Validación (`VALIDATION_ERROR`), incluido `notaMinima` en una lección de contenido o `videoUrl`
+            en un cuestionario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Lecciones]
+      summary: Eliminar lección y recompactar el orden
+      operationId: deleteLeccion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Lección eliminada (sus preguntas, progresos e intentos se borran en cascada)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La lección no existe (`LESSON_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: El curso tiene estudiantes inscritos (`COURSE_HAS_STUDENTS`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Es la última lección de un curso publicado (`PUBLISHED_COURSE_NEEDS_LESSON`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /lecciones/{id}/preguntas:
+    post:
+      tags: [Preguntas]
+      summary: Crear pregunta de opción múltiple en un cuestionario
+      operationId: createPregunta
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreguntaRequest'
+      responses:
+        '201':
+          description: Pregunta creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreguntaEditor'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La lección no existe (`LESSON_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: |
+            Validación (`VALIDATION_ERROR`), la lección no es un cuestionario (`LESSON_NOT_QUIZ`) o llegó al
+            máximo de 30 preguntas (`QUESTION_LIMIT_REACHED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /preguntas/{id}:
+    put:
+      tags: [Preguntas]
+      summary: Reemplazar la pregunta completa
+      operationId: updatePregunta
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreguntaRequest'
+      responses:
+        '200':
+          description: Pregunta actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreguntaEditor'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La pregunta no existe (`QUESTION_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Preguntas]
+      summary: Eliminar pregunta
+      operationId: deletePregunta
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Pregunta eliminada
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La pregunta no existe (`QUESTION_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Es la última pregunta de un cuestionario de un curso publicado (`QUIZ_WITHOUT_QUESTIONS`)
           content:
             application/json:
               schema:
@@ -858,44 +1164,201 @@ components:
             lecciones:
               type: array
               items:
-                type: object
-                required: [id, cursoId, titulo, tipo, orden]
-                properties:
-                  id:
-                    type: integer
-                  cursoId:
-                    type: integer
-                  titulo:
-                    type: string
-                  contenido:
-                    type: string
-                    nullable: true
-                  tipo:
-                    type: string
-                    enum: [contenido, cuestionario]
-                  orden:
-                    type: integer
-                  preguntas:
-                    type: array
-                    items:
-                      type: object
-                      required: [id, leccionId, enunciado, opciones, indiceCorrecto]
-                      properties:
-                        id:
-                          type: integer
-                        leccionId:
-                          type: integer
-                        enunciado:
-                          type: string
-                        opciones:
-                          type: array
-                          items:
-                            type: string
-                        indiceCorrecto:
-                          type: integer
-                        explicacion:
-                          type: string
-                          nullable: true
+                allOf:
+                  - $ref: '#/components/schemas/Leccion'
+                  - type: object
+                    required: [preguntas]
+                    properties:
+                      preguntas:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PreguntaEditor'
+    TipoLeccion:
+      type: string
+      enum: [contenido, cuestionario]
+    Leccion:
+      type: object
+      required: [id, cursoId, titulo, tipo, orden]
+      properties:
+        id:
+          type: integer
+          example: 4
+        cursoId:
+          type: integer
+          example: 1
+        titulo:
+          type: string
+          example: Variables y tipos de datos
+        contenido:
+          type: string
+          nullable: true
+          description: Texto de la lección (en cuestionarios, instrucciones opcionales)
+        videoUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: Solo lecciones de contenido
+        tipo:
+          $ref: '#/components/schemas/TipoLeccion'
+        orden:
+          type: integer
+          minimum: 1
+          example: 2
+        notaMinima:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Solo cuestionarios
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateLeccionContenidoRequest:
+      type: object
+      required: [tipo, titulo]
+      properties:
+        tipo:
+          type: string
+          enum: [contenido]
+        titulo:
+          type: string
+          minLength: 3
+          maxLength: 200
+        contenido:
+          type: string
+          maxLength: 20000
+          nullable: true
+        videoUrl:
+          type: string
+          format: uri
+          maxLength: 500
+          nullable: true
+          description: http(s); vacío se guarda como null
+    CreateLeccionCuestionarioRequest:
+      type: object
+      required: [tipo, titulo, notaMinima]
+      properties:
+        tipo:
+          type: string
+          enum: [cuestionario]
+        titulo:
+          type: string
+          minLength: 3
+          maxLength: 200
+        contenido:
+          type: string
+          maxLength: 20000
+          nullable: true
+          description: Instrucciones opcionales
+        notaMinima:
+          type: integer
+          minimum: 0
+          maximum: 100
+    CreateLeccionRequest:
+      oneOf:
+        - $ref: '#/components/schemas/CreateLeccionContenidoRequest'
+        - $ref: '#/components/schemas/CreateLeccionCuestionarioRequest'
+      discriminator:
+        propertyName: tipo
+        mapping:
+          contenido: '#/components/schemas/CreateLeccionContenidoRequest'
+          cuestionario: '#/components/schemas/CreateLeccionCuestionarioRequest'
+    UpdateLeccionRequest:
+      type: object
+      minProperties: 1
+      description: Al menos un campo. `videoUrl` solo aplica a contenido y `notaMinima` solo a cuestionarios.
+      properties:
+        titulo:
+          type: string
+          minLength: 3
+          maxLength: 200
+        contenido:
+          type: string
+          maxLength: 20000
+          nullable: true
+        videoUrl:
+          type: string
+          format: uri
+          maxLength: 500
+          nullable: true
+        notaMinima:
+          type: integer
+          minimum: 0
+          maximum: 100
+    ReordenarLeccionesRequest:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          description: Todas las lecciones del curso, sin repetir, en el orden nuevo
+          minItems: 1
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: integer
+          example: [6, 4, 5]
+    PreguntaEditor:
+      type: object
+      description: Pregunta para el editor del instructor dueño (incluye la respuesta correcta)
+      required: [id, leccionId, enunciado, opciones, indiceCorrecto]
+      properties:
+        id:
+          type: integer
+        leccionId:
+          type: integer
+        enunciado:
+          type: string
+          example: ¿Qué palabra clave declara una constante?
+        opciones:
+          type: array
+          items:
+            type: string
+          example: [var, let, const]
+        indiceCorrecto:
+          type: integer
+          example: 2
+        explicacion:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PreguntaRequest:
+      type: object
+      required: [enunciado, opciones, indiceCorrecto]
+      properties:
+        enunciado:
+          type: string
+          minLength: 3
+          maxLength: 1000
+        opciones:
+          type: array
+          description: Entre 2 y 6 textos no vacíos (hasta 300 caracteres) sin repetir
+          minItems: 2
+          maxItems: 6
+          items:
+            type: string
+            maxLength: 300
+        indiceCorrecto:
+          type: integer
+          minimum: 0
+          description: Índice dentro de `opciones`
+        explicacion:
+          type: string
+          maxLength: 2000
+          nullable: true
+      example:
+        enunciado: ¿Qué palabra clave declara una constante?
+        opciones: [var, let, const]
+        indiceCorrecto: 2
+        explicacion: const impide reasignar la variable.
     PaginatedCursosResponse:
       type: object
       required: [data, meta]

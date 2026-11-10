@@ -17,6 +17,7 @@ Documento vivo (`REGLAS.md` B.13): todo cambio de roles, permisos o reglas de ac
 | `authenticate` | 401 `UNAUTHORIZED` (sin token) · `INVALID_TOKEN` · `TOKEN_EXPIRED` | Toda ruta privada |
 | `authorize(...roles)` | 403 `FORBIDDEN` | Rutas de un rol (instructor / estudiante) |
 | `isCourseOwner` | 404 `COURSE_NOT_FOUND` · 403 `FORBIDDEN` | Recursos del instructor dueño (RN-07) |
+| `isLeccionOwner` / `isPreguntaOwner` | 404 `LESSON_NOT_FOUND` / `QUESTION_NOT_FOUND` · 403 `FORBIDDEN` | Lecciones y preguntas: resuelven el curso padre en una consulta y usan la misma verificación de dueño |
 | `isEnrolled` (paso 07) | 403 | Contenido de un curso para inscritos (RN-08) |
 
 ## Matriz de acceso implementada
@@ -35,6 +36,12 @@ Documento vivo (`REGLAS.md` B.13): todo cambio de roles, permisos o reglas de ac
 | `PATCH /cursos/:id/estado` | 401 | 403 | ✅ solo dueño (422 sin lecciones) |
 | `GET /instructor/cursos` | 401 | 403 | ✅ solo los propios |
 | `GET /instructor/cursos/:id` | 401 | 403 | ✅ solo dueño (con preguntas) |
+| `POST /cursos/:id/lecciones` | 401 | 403 | ✅ solo dueño |
+| `PATCH /cursos/:id/lecciones/orden` | 401 | 403 | ✅ solo dueño (422 si no vienen todas) |
+| `PUT /lecciones/:id` | 401 | 403 | ✅ solo dueño (tipo no editable) |
+| `DELETE /lecciones/:id` | 401 | 403 | ✅ solo dueño (409 con inscritos) |
+| `POST /lecciones/:id/preguntas` | 401 | 403 | ✅ solo dueño (422 si no es cuestionario) |
+| `PUT /preguntas/:id` · `DELETE /preguntas/:id` | 401 | 403 | ✅ solo dueño |
 
 El resto de los endpoints y su acceso previsto están en [endpoints.md](endpoints.md); cada paso los agrega aquí al implementarlos.
 
@@ -52,3 +59,6 @@ El resto de los endpoints y su acceso previsto están en [endpoints.md](endpoint
 10. Un curso solo puede publicarse si cuenta con al menos una lección (`RN-05` / 422 `COURSE_CANNOT_PUBLISH_EMPTY`).
 11. Un curso con estudiantes inscritos no puede ser eliminado (`RN-06` / 409 `COURSE_HAS_STUDENTS`).
 12. El catálogo y detalle público solo devuelven cursos con `estado = 'publicado'`; el temario público omite contenido, videoUrl y preguntas.
+13. Un curso publicado siempre tiene ≥ 1 lección y todos sus cuestionarios ≥ 1 pregunta: se valida al publicar (422 `QUIZ_WITHOUT_QUESTIONS`) y al borrar (422 `PUBLISHED_COURSE_NEEDS_LESSON` / `QUIZ_WITHOUT_QUESTIONS`).
+14. No se borran lecciones de un curso con inscritos (409 `COURSE_HAS_STUDENTS`): rompería su progreso (§6 del plan).
+15. El `orden` de las lecciones es siempre 1..n: crear, borrar y reordenar bloquean la fila del curso (`SELECT ... FOR UPDATE`) dentro de una transacción.

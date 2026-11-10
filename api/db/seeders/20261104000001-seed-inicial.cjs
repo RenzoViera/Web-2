@@ -102,6 +102,7 @@ module.exports = {
           titulo: 'Evaluación del Módulo 1',
           contenido: 'Cuestionario de opción múltiple para validar los conocimientos adquiridos en el módulo.',
           tipo: 'cuestionario',
+          notaMinima: 70,
           orden: 3,
           createdAt: now,
           updatedAt: now,

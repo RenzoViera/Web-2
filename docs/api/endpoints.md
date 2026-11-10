@@ -40,13 +40,13 @@ Cerrar sesión: stateless, el cliente borra el token (no hay endpoint).
 
 | Método | Ruta | Acceso | Descripción | Estado |
 |---|---|---|---|---|
-| POST | `/cursos/:id/lecciones` | Instructor dueño | Crear lección (orden = último + 1) | ⏳ Paso 05 |
-| PATCH | `/cursos/:id/lecciones/orden` | Instructor dueño | Reordenar en transacción | ⏳ Paso 05 |
-| PUT | `/lecciones/:id` | Instructor dueño | Editar lección | ⏳ Paso 05 |
-| DELETE | `/lecciones/:id` | Instructor dueño | Borrar y recompactar orden (409 con inscritos) | ⏳ Paso 05 |
-| POST | `/lecciones/:id/preguntas` | Instructor dueño | Crear pregunta (422 si no es cuestionario) | ⏳ Paso 05 |
-| PUT | `/preguntas/:id` | Instructor dueño | Editar pregunta | ⏳ Paso 05 |
-| DELETE | `/preguntas/:id` | Instructor dueño | Borrar pregunta | ⏳ Paso 05 |
+| POST | `/cursos/:id/lecciones` | Instructor dueño | Crear lección (orden = último + 1) | ✅ Paso 05 |
+| PATCH | `/cursos/:id/lecciones/orden` | Instructor dueño | Reordenar en transacción | ✅ Paso 05 |
+| PUT | `/lecciones/:id` | Instructor dueño | Editar lección | ✅ Paso 05 |
+| DELETE | `/lecciones/:id` | Instructor dueño | Borrar y recompactar orden (409 con inscritos) | ✅ Paso 05 |
+| POST | `/lecciones/:id/preguntas` | Instructor dueño | Crear pregunta (422 si no es cuestionario) | ✅ Paso 05 |
+| PUT | `/preguntas/:id` | Instructor dueño | Editar pregunta | ✅ Paso 05 |
+| DELETE | `/preguntas/:id` | Instructor dueño | Borrar pregunta | ✅ Paso 05 |
 
 ## Inscripción y avance
 

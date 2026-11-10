@@ -1,4 +1,5 @@
 import * as cursoRepo from '../repositories/curso.repository.js';
+import * as leccionRepo from '../repositories/leccion.repository.js';
 import { AppError } from '../utils/AppError.js';
 import { ERROR_CODES } from '../utils/errorCodes.js';
 import { buildPaginatedResponse, getPagination } from '../utils/pagination.js';
@@ -41,19 +42,27 @@ export const actualizarCurso = async (cursoId, changes) => {
 };
 
 /**
- * Cambia el estado de un curso con validaciones de negocio (RN-05).
+ * Cambia el estado de un curso con validaciones de negocio (RN-05): publicar exige ≥ 1 lección y que todo
+ * cuestionario tenga preguntas (sin preguntas no se puede calificar, paso 08).
  * @param {number} cursoId
  * @param {'borrador' | 'publicado' | 'archivado'} nuevoEstado
  * @returns {Promise<object>}
  */
 export const cambiarEstado = async (cursoId, nuevoEstado) => {
   if (nuevoEstado === 'publicado') {
-    const totalLecciones = await cursoRepo.countLecciones(cursoId);
-    if (totalLecciones === 0) {
+    const { total, cuestionariosSinPreguntas } = await leccionRepo.getStatsByCurso(cursoId);
+    if (total === 0) {
       throw new AppError(
         422,
         ERROR_CODES.COURSE_CANNOT_PUBLISH_EMPTY,
         'No se puede publicar un curso sin lecciones',
+      );
+    }
+    if (cuestionariosSinPreguntas > 0) {
+      throw new AppError(
+        422,
+        ERROR_CODES.QUIZ_WITHOUT_QUESTIONS,
+        'No se puede publicar: hay cuestionarios sin preguntas',
       );
     }
   }
