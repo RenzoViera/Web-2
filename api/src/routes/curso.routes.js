@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as cursoController from '../controllers/curso.controller.js';
 import * as inscripcionController from '../controllers/inscripcion.controller.js';
 import * as leccionController from '../controllers/leccion.controller.js';
-import { authenticate } from '../middlewares/authenticate.js';
+import { authenticate, optionalAuthenticate } from '../middlewares/authenticate.js';
 import { authorize } from '../middlewares/authorize.js';
 import { isCourseOwner } from '../middlewares/isCourseOwner.js';
 import { validate } from '../middlewares/validate.js';
@@ -18,9 +18,11 @@ import { createLeccionSchema, reordenarLeccionesSchema } from '../validators/lec
 
 export const cursoRoutes = Router();
 
-// Catálogo público
+// Catálogo público (`/categorias` va antes de `/:id`)
 cursoRoutes.get('/', validate({ query: catalogoQuerySchema }), cursoController.listPublic);
-cursoRoutes.get('/:id', validate({ params: idParamSchema }), cursoController.getPublic);
+cursoRoutes.get('/categorias', cursoController.listCategorias);
+// Auth opcional: con token de estudiante el detalle incluye `inscrito` (paso 06)
+cursoRoutes.get('/:id', optionalAuthenticate, validate({ params: idParamSchema }), cursoController.getPublic);
 
 // Inscripción del estudiante (paso 06)
 cursoRoutes.post(
