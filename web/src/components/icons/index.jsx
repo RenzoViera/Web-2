@@ -200,3 +200,27 @@ export const ListChecksIcon = (props) => (
     <path d="m3 7 2 2 4-4M3 17l2 2 4-4M13 6h8M13 12h8M13 18h8" />
   </Icon>
 );
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const LockIcon = (props) => (
+  <Icon {...props}>
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const ArrowRightIcon = (props) => (
+  <Icon {...props}>
+    <path d="M5 12h14m-7-7 7 7-7 7" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const ExternalLinkIcon = (props) => (
+  <Icon {...props}>
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <path d="M15 3h6v6" />
+    <path d="M10 14 21 3" />
+  </Icon>
+);

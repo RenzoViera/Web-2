@@ -10,6 +10,7 @@ import { calcularPorcentaje } from './progreso.service.js';
  * @typedef {object} MiInscripcion
  * @property {number} id
  * @property {number} cursoId
+ * @property {boolean} completado
  * @property {Date} fechaInscripcion
  * @property {{ id: number, titulo: string, categoria: string, nivel: string, estado: string, imagenUrl: string | null, instructor: { id: number, nombre: string } }} curso
  * @property {number} totalLecciones
@@ -47,12 +48,13 @@ export const inscribir = async (usuarioId, cursoId) => {
  * @returns {MiInscripcion}
  */
 const toMiInscripcion = (row) => {
-  const { id, cursoId, createdAt, curso, totalLecciones, leccionesCompletadas, siguienteLeccionId } = row.get({
+  const { id, cursoId, completado, createdAt, curso, totalLecciones, leccionesCompletadas, siguienteLeccionId } = row.get({
     plain: true,
   });
   return {
     id,
     cursoId,
+    completado: Boolean(completado),
     fechaInscripcion: createdAt,
     curso,
     totalLecciones,

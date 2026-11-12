@@ -27,6 +27,11 @@ Inscripcion.init(
         key: 'id',
       },
     },
+    completado: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     sequelize,
@@ -37,6 +42,10 @@ Inscripcion.init(
         unique: true,
         fields: ['usuarioId', 'cursoId'],
         name: 'inscripciones_usuario_curso_unique',
+      },
+      {
+        fields: ['cursoId', 'completado'],
+        name: 'inscripciones_curso_completado_idx',
       },
     ],
   },

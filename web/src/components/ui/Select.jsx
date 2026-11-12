@@ -43,7 +43,7 @@ export function Select({
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef(/** @type {HTMLDivElement | null} */ (null));
   const triggerRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
-  const listboxRef = useRef(/** @type {HTMLUListElement | null} */ (null));
+  const listboxRef = useRef(/** @type {HTMLDivElement | null} */ (null));
 
   const generatedId = useId();
   const selectId = name ?? generatedId;

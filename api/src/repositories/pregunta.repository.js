@@ -15,6 +15,9 @@ export const PREGUNTA_EDITOR_ATTRIBUTES = [
   'updatedAt',
 ];
 
+/** Columnas visibles al estudiante antes/al ver un cuestionario (nunca incluye `indiceCorrecto`, RN-02). */
+export const PREGUNTA_PUBLIC_ATTRIBUTES = ['id', 'leccionId', 'enunciado', 'opciones'];
+
 const WRITE_FIELDS = ['leccionId', 'enunciado', 'opciones', 'indiceCorrecto', 'explicacion'];
 
 /**
@@ -33,6 +36,17 @@ export const findByIdWithCurso = (id) =>
         include: [{ model: Curso, as: 'curso', attributes: ['id', 'instructorId', 'estado'] }],
       },
     ],
+  });
+
+/**
+ * @param {number} leccionId
+ * @returns {Promise<Pregunta[]>}
+ */
+export const findPublicByLeccion = (leccionId) =>
+  Pregunta.findAll({
+    where: { leccionId },
+    attributes: PREGUNTA_PUBLIC_ATTRIBUTES,
+    order: [['id', 'ASC']],
   });
 
 /**

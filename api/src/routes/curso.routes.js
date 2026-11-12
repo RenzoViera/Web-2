@@ -2,9 +2,11 @@ import { Router } from 'express';
 import * as cursoController from '../controllers/curso.controller.js';
 import * as inscripcionController from '../controllers/inscripcion.controller.js';
 import * as leccionController from '../controllers/leccion.controller.js';
+import * as progresoController from '../controllers/progreso.controller.js';
 import { authenticate, optionalAuthenticate } from '../middlewares/authenticate.js';
 import { authorize } from '../middlewares/authorize.js';
 import { isCourseOwner } from '../middlewares/isCourseOwner.js';
+import { isCourseEnrolled } from '../middlewares/isEnrolled.js';
 import { validate } from '../middlewares/validate.js';
 import { ROLES } from '../utils/roles.js';
 import { idParamSchema } from '../validators/common.validator.js';
@@ -24,13 +26,22 @@ cursoRoutes.get('/categorias', cursoController.listCategorias);
 // Auth opcional: con token de estudiante el detalle incluye `inscrito` (paso 06)
 cursoRoutes.get('/:id', optionalAuthenticate, validate({ params: idParamSchema }), cursoController.getPublic);
 
-// Inscripción del estudiante (paso 06)
+// Inscripción y avance del estudiante (pasos 06 y 07)
 cursoRoutes.post(
   '/:id/inscripcion',
   authenticate,
   authorize(ROLES.ESTUDIANTE),
   validate({ params: idParamSchema }),
   inscripcionController.create,
+);
+
+cursoRoutes.get(
+  '/:id/progreso',
+  authenticate,
+  authorize(ROLES.ESTUDIANTE),
+  validate({ params: idParamSchema }),
+  isCourseEnrolled,
+  progresoController.getCursoProgreso,
 );
 
 // Administración por instructor

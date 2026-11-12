@@ -104,13 +104,16 @@ cursoRoutes.post('/', authenticate, authorize(ROLES.INSTRUCTOR), validate({ body
 - Los servicios los importan como namespace: `import * as usuarioRepository from '../repositories/usuario.repository.js'`.
 - `usuario.repository.js`: `findById`, `findByEmailWithPassword` (solo login), `findPasswordHash`, `create` (INSERT ... RETURNING) y `update` (UPDATE ... RETURNING, `null` si el usuario no existe).
 - `leccion.repository.js` (paso 05): `findByIdWithCurso`, `findByCurso`, `findIdsByCurso`, `getStatsByCurso` (total, mayor orden y cuestionarios sin preguntas en una consulta), `create`, `update`, `deleteById`, `compactOrden` y `reorder` (un solo `UPDATE` cada uno).
-- `pregunta.repository.js` (paso 05): `findByIdWithCurso`, `countByLeccion`, `create`, `update`, `deleteById`. Columnas del editor (con `indiceCorrecto`).
+- `pregunta.repository.js` (pasos 05 y 07): `findByIdWithCurso`, `findPublicByLeccion` (sin `indiceCorrecto`), `countByLeccion`, `create`, `update`, `deleteById`. Columnas del editor (`PREGUNTA_EDITOR_ATTRIBUTES`, con `indiceCorrecto`) vs públicas (`PREGUNTA_PUBLIC_ATTRIBUTES`).
 - `curso.repository.js`: `findById`, `findEstadoById`, `lockById` (`SELECT ... FOR UPDATE`), `create`, `update`, `updateEstado`, `deleteById`, `countInscripciones`, `findInstructorCursos` (con conteo de lecciones e inscritos por subconsulta SQL sin N+1), `findInstructorCursoById` (con lecciones y preguntas completas para editor), `findPublicados` (solo publicados, búsqueda `q` por ILIKE en título con `%`/`_` escapados, filtros y paginación), `findPublicadoById` (temario público resumido + `inscrito` por `EXISTS` en la misma consulta) y `findCategoriasPublicadas` (`GROUP BY categoria`).
-- `inscripcion.repository.js` (paso 06): `create` (el UNIQUE rechaza duplicados) y `findByUsuario` (paginado, con curso, instructor y `totalLecciones`, `leccionesCompletadas` y `siguienteLeccionId` por subconsultas correlacionadas: una consulta por página).
+- `inscripcion.repository.js` (pasos 06 y 07): `create` (el UNIQUE rechaza duplicados), `findByUsuario` (paginado, con curso, instructor y `totalLecciones`, `leccionesCompletadas` y `siguienteLeccionId` por subconsultas correlacionadas: una consulta por página), `findByUsuarioAndCurso`, `lockByUsuarioAndCurso` y `updateCompletado`.
+- `progreso.repository.js` (paso 07): `findByUsuarioAndLecciones` (consulta por lote `IN`, sin N+1), `findByUsuarioAndLeccion` y `markCompletada` (idempotente).
 
-## Avance (`services/progreso.service.js`)
+## Avance (`services/progreso.service.js`) y middlewares de inscripción (`middlewares/isEnrolled.js`)
 
-`calcularPorcentaje(completadas, total)` → entero 0-100 (0 si el curso no tiene lecciones). Única fórmula del porcentaje: la usan Mis cursos (paso 06), la vista de lección (07) y el panel (09).
+- `calcularPorcentaje(completadas, total)` → entero 0-100 (0 si el curso no tiene lecciones). Única fórmula del porcentaje: la usan Mis cursos (paso 06), la vista de lección (07) y el panel (09).
+- `obtenerProgresoCurso`, `obtenerLeccionEstudiante` y `completarLeccion`: validan avance secuencial (RN-01: todas las anteriores por `orden` completadas), sanitizan preguntas con `toPublicPregunta()` (RN-02) y actualizan `inscripciones.completado` en transacción.
+- `middlewares/isEnrolled.js`: `isCourseEnrolled` y `isLeccionEnrolled` comparten `assertEnrolled` (404 si no existe el curso/lección, 403 `NOT_ENROLLED` si el estudiante no está inscrito, RN-08).
 
 ## Middlewares de propiedad (`middlewares/isCourseOwner.js`)
 

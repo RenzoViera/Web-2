@@ -121,6 +121,7 @@ Tailwind v4 con `@theme`. Los componentes usan solo clases semánticas:
 - **Catálogo** (`pages/public/CatalogPage`): los filtros viven en la URL (`?q=&categoria=&page=`, `useSearchParams`). El buscador escribe en la URL con `useDebouncedCallback` (300 ms, `replace`) y se resincroniza si la URL cambia desde afuera (atrás/adelante). Cambiar un filtro vuelve a la página 1 sin mover el scroll; paginar sí sube. Las categorías son una sección independiente (`GET /cursos/categorias`, petición compartida con `dedupeRequest`) con su propia carga y error. Mientras carga un filtro nuevo no se muestran resultados viejos.
 - **Detalle** (`pages/public/CourseDetailPage`): la acción depende de quién mira (visitante → login con `state.from` para volver; estudiante → Inscribirme / Ir al curso; instructor → aviso). Inscribirse hace 1 request y actualiza el estado local (sin recargar el detalle); un 409 `ALREADY_ENROLLED` se toma como inscrito.
 - **Mis cursos** (`pages/student/MyCoursesPage`): `EnrolledCourseCard` con avance y botón Empezar (0 %) / Continuar / Repasar (100 %) a `siguienteLeccionId`. Los cursos archivados muestran su badge.
+- **Vista de lección** (`pages/student/LessonViewerPage`, paso 07): `useProgreso` carga en paralelo `GET /cursos/:id/progreso` y `GET /lecciones/:id` vía `useFetch` (estados y reintentos independientes por sección). `LessonSidebar` muestra el temario secuencial con candados en lecciones bloqueadas; `LessonVideo` embebe YouTube/Vimeo, `<video>` o enlace externo seguro (`utils/video.js`); `LessonQuizPreview` previsualiza preguntas públicas (sin `indiceCorrecto`) hasta el paso 08. Al marcar como completada se actualiza el estado local sin refetch global.
 
 ## Layout y navegación
 
@@ -151,7 +152,7 @@ Layout (errorElement: pantalla completa)
    │  ├─ /perfil            ProfilePage
    │  ├─ RoleRoute estudiante
    │  │  ├─ /mis-cursos     MyCoursesPage
-   │  │  └─ /cursos/:cursoId/lecciones/:leccionId   ComingSoonPage (vista de lección, paso 07)
+   │  │  └─ /cursos/:cursoId/lecciones/:leccionId   LessonViewerPage (vista de lección, paso 07)
    │  └─ RoleRoute instructor
    │     ├─ /instructor/cursos                              InstructorCoursesPage
    │     ├─ /instructor/cursos/nuevo · /:id/editar          CourseEditorPage (temario con LessonList)
@@ -178,7 +179,6 @@ Los errores esperados (validación, 4xx de negocio) **no** usan este aviso: se m
 
 ## Pendientes de frontend para próximos pasos
 
-- Reemplazar `ComingSoonPage` de `/cursos/:cursoId/lecciones/:leccionId` por la vista de lección (paso 07). Mis cursos y el detalle ya enlazan ahí (`leccionPath`).
 - Modal con URL propia (C.40): patrón de referencia en `LessonEditorPage` + `QuestionModalPage` (ruta hija, `<Suspense>` alrededor del `<Outlet />` para no tapar la página al cargar el modal lazy, cerrar con `navigate(-1)` o al padre si `location.key === 'default'`).
 
 ## Scripts (`web/package.json`)

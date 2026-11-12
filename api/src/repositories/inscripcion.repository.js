@@ -1,7 +1,7 @@
 import { sequelize } from '../config/database.js';
 import { Curso, Inscripcion, Usuario } from '../models/index.js';
 
-const INSCRIPCION_ATTRIBUTES = ['id', 'usuarioId', 'cursoId', 'createdAt'];
+const INSCRIPCION_ATTRIBUTES = ['id', 'usuarioId', 'cursoId', 'completado', 'createdAt'];
 
 const CURSO_RESUMEN_ATTRIBUTES = ['id', 'titulo', 'categoria', 'nivel', 'estado', 'imagenUrl'];
 
@@ -70,3 +70,47 @@ export const findByUsuario = (usuarioId, { limit, offset }) =>
     limit,
     offset,
   });
+
+/**
+ * Inscripción puntual de un estudiante en un curso.
+ * @param {number} usuarioId
+ * @param {number} cursoId
+ * @param {{ transaction?: import('sequelize').Transaction }} [options]
+ * @returns {Promise<Inscripcion | null>}
+ */
+export const findByUsuarioAndCurso = (usuarioId, cursoId, { transaction } = {}) =>
+  Inscripcion.findOne({
+    where: { usuarioId, cursoId },
+    attributes: INSCRIPCION_ATTRIBUTES,
+    transaction,
+  });
+
+/**
+ * Toma `SELECT ... FOR UPDATE` sobre la inscripción para serializar completados concurrentes del curso.
+ * @param {number} usuarioId
+ * @param {number} cursoId
+ * @param {import('sequelize').Transaction} transaction
+ * @returns {Promise<Inscripcion | null>}
+ */
+export const lockByUsuarioAndCurso = (usuarioId, cursoId, transaction) =>
+  Inscripcion.findOne({
+    where: { usuarioId, cursoId },
+    attributes: INSCRIPCION_ATTRIBUTES,
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+
+/**
+ * Actualiza `completado` en la inscripción.
+ * @param {number} id
+ * @param {boolean} completado
+ * @param {{ transaction?: import('sequelize').Transaction }} [options]
+ * @returns {Promise<Inscripcion | null>}
+ */
+export const updateCompletado = async (id, completado, { transaction } = {}) => {
+  const [, rows] = await Inscripcion.update(
+    { completado },
+    { where: { id }, fields: ['completado'], returning: INSCRIPCION_ATTRIBUTES, transaction },
+  );
+  return rows[0] ?? null;
+};
