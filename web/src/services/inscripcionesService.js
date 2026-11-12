@@ -5,11 +5,13 @@ import { axiosClient } from '@/api/axiosClient';
  * @property {number} id
  * @property {number} usuarioId
  * @property {number} cursoId
+ * @property {boolean} [completado]
  * @property {string} createdAt
  *
  * @typedef {object} MiInscripcion Fila de "Mis cursos".
  * @property {number} id
  * @property {number} cursoId
+ * @property {boolean} [completado]
  * @property {string} fechaInscripcion
  * @property {{
  *   id: number,
