@@ -15,17 +15,17 @@ const CourseDetailPage = lazy(() => import('@/pages/public/CourseDetailPage'));
 const LoginPage = lazy(() => import('@/pages/public/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/public/RegisterPage'));
 const ProfilePage = lazy(() => import('@/pages/account/ProfilePage'));
-const ComingSoonPage = lazy(() => import('@/pages/public/ComingSoonPage'));
 const NotFoundPage = lazy(() => import('@/pages/public/NotFoundPage'));
 const InstructorCoursesPage = lazy(() => import('@/pages/instructor/InstructorCoursesPage'));
 const CourseEditorPage = lazy(() => import('@/pages/instructor/CourseEditorPage'));
 const LessonEditorPage = lazy(() => import('@/pages/instructor/LessonEditorPage'));
 const QuestionModalPage = lazy(() => import('@/pages/instructor/QuestionModalPage'));
 const MyCoursesPage = lazy(() => import('@/pages/student/MyCoursesPage'));
+const LessonViewerPage = lazy(() => import('@/pages/student/LessonViewerPage'));
 
 /*
- * Pendiente: vista de lección (07, hoy ComingSoonPage), cuestionario (08) y panel del instructor (09);
- * reemplazan a ComingSoonPage o se suman como hijas del RoleRoute de su rol.
+ * Pendiente: cuestionario del estudiante (08) y panel del instructor (09);
+ * se suman como hijas del RoleRoute de su rol.
  */
 const router = createBrowserRouter([
   {
@@ -54,7 +54,7 @@ const router = createBrowserRouter([
                 element: <RoleRoute roles={[ROLES.ESTUDIANTE]} />,
                 children: [
                   { path: PATHS.misCursos, element: <MyCoursesPage /> },
-                  { path: PATHS.leccion, element: <ComingSoonPage title="Lección" /> },
+                  { path: PATHS.leccion, element: <LessonViewerPage /> },
                 ],
               },
               {
