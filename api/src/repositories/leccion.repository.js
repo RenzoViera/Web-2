@@ -2,7 +2,7 @@ import { QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Curso, Leccion } from '../models/index.js';
 
-/** Columnas del editor del instructor (la vista del estudiante, paso 07, define las suyas). */
+/** Columnas del editor del instructor (la vista del estudiante usa `LECCION_STUDENT_ATTRIBUTES`). */
 export const LECCION_ATTRIBUTES = [
   'id',
   'cursoId',
@@ -15,6 +15,19 @@ export const LECCION_ATTRIBUTES = [
   'createdAt',
   'updatedAt',
 ];
+
+export const LECCION_STUDENT_ATTRIBUTES = [
+  'id',
+  'cursoId',
+  'titulo',
+  'contenido',
+  'videoUrl',
+  'tipo',
+  'orden',
+  'notaMinima',
+];
+
+export const LECCION_RESUMEN_ATTRIBUTES = ['id', 'cursoId', 'titulo', 'tipo', 'orden', 'notaMinima'];
 
 const CREATE_FIELDS = ['cursoId', 'titulo', 'contenido', 'videoUrl', 'tipo', 'orden', 'notaMinima'];
 const UPDATE_FIELDS = ['titulo', 'contenido', 'videoUrl', 'notaMinima'];
@@ -32,6 +45,34 @@ export const findByIdWithCurso = (id) =>
   Leccion.findByPk(id, {
     attributes: LECCION_ATTRIBUTES,
     include: [{ model: Curso, as: 'curso', attributes: ['id', 'instructorId', 'estado'] }],
+  });
+
+/**
+ * Lección con el curso mínimo para la vista del estudiante (sin `createdAt`/`updatedAt`).
+ * @param {number} id
+ * @returns {Promise<Leccion | null>}
+ */
+export const findByIdForStudent = (id) =>
+  Leccion.findByPk(id, {
+    attributes: LECCION_STUDENT_ATTRIBUTES,
+    include: [{ model: Curso, as: 'curso', attributes: ['id', 'titulo', 'estado'] }],
+  });
+
+/**
+ * Temario resumido de un curso para calcular avance secuencial (sin `contenido` ni `videoUrl`).
+ * @param {number} cursoId
+ * @param {TxOptions} [options]
+ * @returns {Promise<Leccion[]>}
+ */
+export const findResumenByCurso = (cursoId, { transaction } = {}) =>
+  Leccion.findAll({
+    where: { cursoId },
+    attributes: LECCION_RESUMEN_ATTRIBUTES,
+    order: [
+      ['orden', 'ASC'],
+      ['id', 'ASC'],
+    ],
+    transaction,
   });
 
 /**
