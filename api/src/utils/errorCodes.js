@@ -32,4 +32,8 @@ export const ERROR_CODES = Object.freeze({
   PUBLISHED_COURSE_NEEDS_LESSON: 'PUBLISHED_COURSE_NEEDS_LESSON',
   // Inscripción (paso 06)
   ALREADY_ENROLLED: 'ALREADY_ENROLLED',
+  // Progreso y lecciones del estudiante (paso 07)
+  NOT_ENROLLED: 'NOT_ENROLLED',
+  LESSON_LOCKED: 'LESSON_LOCKED',
+  LESSON_NOT_CONTENT: 'LESSON_NOT_CONTENT',
 });
