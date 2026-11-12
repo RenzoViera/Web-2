@@ -19,7 +19,7 @@ Documento vivo (`REGLAS.md` B.13): todo cambio de roles, permisos o reglas de ac
 | `authorize(...roles)` | 403 `FORBIDDEN` | Rutas de un rol (instructor / estudiante) |
 | `isCourseOwner` | 404 `COURSE_NOT_FOUND` · 403 `FORBIDDEN` | Recursos del instructor dueño (RN-07) |
 | `isLeccionOwner` / `isPreguntaOwner` | 404 `LESSON_NOT_FOUND` / `QUESTION_NOT_FOUND` · 403 `FORBIDDEN` | Lecciones y preguntas: resuelven el curso padre en una consulta y usan la misma verificación de dueño |
-| `isEnrolled` (paso 07) | 403 | Contenido de un curso para inscritos (RN-08) |
+| `isCourseEnrolled` / `isLeccionEnrolled` | 404 `COURSE_NOT_FOUND` / `LESSON_NOT_FOUND` · 403 `NOT_ENROLLED` | Avance y contenido de lecciones: exigen inscripción del estudiante autenticado (RN-08) |
 
 ## Matriz de acceso implementada
 
@@ -34,6 +34,9 @@ Documento vivo (`REGLAS.md` B.13): todo cambio de roles, permisos o reglas de ac
 | `GET /cursos/:id` | ✅ solo si publicado (`inscrito: null`) | ✅ solo si publicado (+ `inscrito`) | ✅ solo si publicado (`inscrito: null`) |
 | `POST /cursos/:id/inscripcion` | 401 | ✅ solo publicados (409 si ya inscrito) | 403 |
 | `GET /inscripciones/mias` | 401 | ✅ solo las propias | 403 |
+| `GET /cursos/:id/progreso` | 401 | ✅ solo si está inscrito (`403 NOT_ENROLLED`) | 403 |
+| `GET /lecciones/:id` | 401 | ✅ solo si está inscrito y desbloqueada (`403 LESSON_LOCKED`) | 403 |
+| `POST /lecciones/:id/completar` | 401 | ✅ solo contenido desbloqueado (`422` si cuestionario) | 403 |
 | `POST /cursos` | 401 | 403 | ✅ crea borrador |
 | `PUT /cursos/:id` | 401 | 403 | ✅ solo dueño (403 ajeno) |
 | `DELETE /cursos/:id` | 401 | 403 | ✅ solo dueño (409 con inscritos) |
@@ -70,3 +73,6 @@ El resto de los endpoints y su acceso previsto están en [endpoints.md](endpoint
 17. Cada estudiante ve solo sus inscripciones (RN-08): `GET /inscripciones/mias` filtra por `req.user.id`, nunca por un id del cliente. El detalle público calcula `inscrito` con el id del token.
 18. Un curso archivado sigue visible en Mis cursos para quien ya estaba inscrito (§6 del plan); no aparece en el catálogo ni acepta inscripciones nuevas.
 19. Inscribirse y borrar una lección no se pisan: el INSERT de la inscripción toma `FOR KEY SHARE` sobre el curso (FK), que espera al `FOR UPDATE` del borrado; así el conteo de inscritos del borrado es fiel (invariante 14).
+20. El avance es estrictamente secuencial (RN-01): una lección está desbloqueada solo si todas las lecciones anteriores por `orden` están completadas en `progresos_lecciones`; tanto `GET /lecciones/:id` como `POST /lecciones/:id/completar` devuelven 403 `LESSON_LOCKED` si falta alguna anterior.
+21. Los cuestionarios no pueden marcarse como completados manualmente (`422 LESSON_NOT_CONTENT`): solo se completan al aprobarlos (paso 08). Al ver un cuestionario desbloqueado, `GET /lecciones/:id` devuelve preguntas mediante `PREGUNTA_PUBLIC_ATTRIBUTES` + `toPublicPregunta()` (sin `indiceCorrecto`, RN-02).
+22. Completar una lección toma bloqueo `FOR UPDATE` sobre la inscripción del estudiante y actualiza `inscripciones.completado` en la misma transacción.

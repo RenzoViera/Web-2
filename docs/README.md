@@ -15,6 +15,7 @@
 | [pasos/paso-04.md](pasos/paso-04.md) | Registro del paso 04: cursos del instructor y catálogo base (API + Web) |
 | [pasos/paso-05.md](pasos/paso-05.md) | Registro del paso 05: lecciones y preguntas del instructor |
 | [pasos/paso-06.md](pasos/paso-06.md) | Registro del paso 06: catálogo, detalle, inscripción y Mis cursos |
+| [pasos/paso-07.md](pasos/paso-07.md) | Registro del paso 07: avance secuencial, vista de lección y completar |
 
 Reglas de desarrollo: [../REGLAS.md](../REGLAS.md). Documentación interactiva de la API: `http://localhost:3000/api/docs`.
 

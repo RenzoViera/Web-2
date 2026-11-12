@@ -42,6 +42,10 @@ tags:
     description: |
       Inscripción del estudiante a cursos publicados (RN-04: una sola por curso) y su listado "Mis cursos"
       con el porcentaje de avance. Cada estudiante ve solo las propias (RN-08).
+  - name: Progreso
+    description: |
+      Avance secuencial del estudiante inscrito (RN-01, RN-08). Una lección está desbloqueada solo cuando
+      todas las anteriores por `orden` están completadas. Los cuestionarios nunca exponen `indiceCorrecto` (RN-02).
 paths:
   /health:
     get:
@@ -550,7 +554,90 @@ paths:
                   timestamp: '2026-11-09T12:00:00.000Z'
         '500':
           $ref: '#/components/responses/InternalError'
+  /cursos/{id}/progreso:
+    get:
+      tags: [Progreso]
+      summary: Estado secuencial de avance del estudiante inscrito en el curso
+      description: |
+        Devuelve el resumen del curso, porcentaje de avance, `completado` y la lista ordenada de lecciones
+        con `completada`, `desbloqueada` y `fechaCompletada` (RN-01, RN-08).
+      operationId: getCursoProgreso
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Progreso del curso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursoProgreso'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: El usuario no es estudiante o no está inscrito en el curso (`NOT_ENROLLED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El curso no existe (`COURSE_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /lecciones/{id}:
+    get:
+      tags: [Progreso]
+      summary: Ver contenido de una lección desbloqueada (solo estudiante inscrito)
+      description: |
+        Valida inscripción (RN-08) y desbloqueo secuencial (RN-01: todas las lecciones anteriores completadas).
+        En cuestionarios devuelve las preguntas públicas sin `indiceCorrecto` (RN-02).
+      operationId: getLeccionEstudiante
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Contenido de la lección
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeccionEstudiante'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: |
+            No inscrito (`NOT_ENROLLED`), rol incorrecto (`FORBIDDEN`) o lección bloqueada por avance secuencial
+            (`LESSON_LOCKED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  status: 403
+                  code: LESSON_LOCKED
+                  message: Esta lección está bloqueada. Completa las lecciones anteriores para continuar.
+                  details: null
+                  requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+                  timestamp: '2026-11-12T12:00:00.000Z'
+        '404':
+          description: La lección no existe (`LESSON_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
     put:
       tags: [Lecciones]
       summary: Editar lección (al menos un campo; el tipo no se edita)
@@ -625,6 +712,49 @@ paths:
                 $ref: '#/components/schemas/Error'
         '422':
           description: Es la última lección de un curso publicado (`PUBLISHED_COURSE_NEEDS_LESSON`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /lecciones/{id}/completar:
+    post:
+      tags: [Progreso]
+      summary: Marcar una lección de contenido como completada (solo estudiante inscrito)
+      description: |
+        Idempotente si ya estaba completada. Valida desbloqueo secuencial (RN-01) y actualiza `inscripciones.completado`
+        cuando alcanza el 100 %. Los cuestionarios solo se completan al aprobarlos (422 `LESSON_NOT_CONTENT`).
+      operationId: completarLeccion
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Lección marcada como completada y resumen actualizado del curso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompletarLeccionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: No inscrito (`NOT_ENROLLED`) o lección bloqueada (`LESSON_LOCKED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La lección no existe (`LESSON_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: La lección es un cuestionario y no puede completarse manualmente (`LESSON_NOT_CONTENT`)
           content:
             application/json:
               schema:
@@ -1504,7 +1634,7 @@ components:
           example: false
     Inscripcion:
       type: object
-      required: [id, usuarioId, cursoId, createdAt]
+      required: [id, usuarioId, cursoId, completado, createdAt]
       properties:
         id:
           type: integer
@@ -1515,13 +1645,16 @@ components:
         cursoId:
           type: integer
           example: 1
+        completado:
+          type: boolean
+          example: false
         createdAt:
           type: string
           format: date-time
     MiInscripcion:
       type: object
       required:
-        [id, cursoId, fechaInscripcion, curso, totalLecciones, leccionesCompletadas, porcentaje, siguienteLeccionId]
+        [id, cursoId, completado, fechaInscripcion, curso, totalLecciones, leccionesCompletadas, porcentaje, siguienteLeccionId]
       properties:
         id:
           type: integer
@@ -1529,6 +1662,9 @@ components:
         cursoId:
           type: integer
           example: 1
+        completado:
+          type: boolean
+          example: false
         fechaInscripcion:
           type: string
           format: date-time
@@ -1587,6 +1723,190 @@ components:
             $ref: '#/components/schemas/MiInscripcion'
         meta:
           $ref: '#/components/schemas/PaginationMeta'
+    LeccionProgresoItem:
+      type: object
+      required: [id, cursoId, titulo, tipo, orden, notaMinima, completada, desbloqueada, fechaCompletada]
+      properties:
+        id:
+          type: integer
+          example: 14
+        cursoId:
+          type: integer
+          example: 1
+        titulo:
+          type: string
+          example: Rutas y controladores en Express
+        tipo:
+          $ref: '#/components/schemas/TipoLeccion'
+        orden:
+          type: integer
+          example: 2
+        notaMinima:
+          type: integer
+          nullable: true
+          example: null
+        completada:
+          type: boolean
+          example: false
+        desbloqueada:
+          type: boolean
+          example: true
+        fechaCompletada:
+          type: string
+          format: date-time
+          nullable: true
+    CursoProgreso:
+      type: object
+      required: [curso, completado, totalLecciones, leccionesCompletadas, porcentaje, siguienteLeccionId, lecciones]
+      properties:
+        curso:
+          type: object
+          required: [id, titulo, estado]
+          properties:
+            id:
+              type: integer
+              example: 1
+            titulo:
+              type: string
+              example: Desarrollo Web con Node.js y Express
+            estado:
+              $ref: '#/components/schemas/EstadoCurso'
+        completado:
+          type: boolean
+          example: false
+        totalLecciones:
+          type: integer
+          example: 3
+        leccionesCompletadas:
+          type: integer
+          example: 1
+        porcentaje:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 33
+        siguienteLeccionId:
+          type: integer
+          nullable: true
+          example: 14
+        lecciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeccionProgresoItem'
+    PreguntaPublica:
+      type: object
+      description: Pregunta visible al estudiante (sin `indiceCorrecto`, RN-02).
+      required: [id, leccionId, enunciado, opciones]
+      properties:
+        id:
+          type: integer
+          example: 5
+        leccionId:
+          type: integer
+          example: 15
+        enunciado:
+          type: string
+          example: ¿Qué método HTTP es idempotente por definición?
+        opciones:
+          type: array
+          items:
+            type: string
+          example: [POST, PUT, CONNECT]
+    LeccionEstudiante:
+      type: object
+      required:
+        [
+          id,
+          cursoId,
+          titulo,
+          contenido,
+          videoUrl,
+          tipo,
+          orden,
+          notaMinima,
+          completada,
+          fechaCompletada,
+          anteriorLeccionId,
+          siguienteLeccionId,
+          preguntas,
+        ]
+      properties:
+        id:
+          type: integer
+          example: 14
+        cursoId:
+          type: integer
+          example: 1
+        titulo:
+          type: string
+          example: Rutas y controladores en Express
+        contenido:
+          type: string
+          nullable: true
+        videoUrl:
+          type: string
+          nullable: true
+          example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+        tipo:
+          $ref: '#/components/schemas/TipoLeccion'
+        orden:
+          type: integer
+          example: 2
+        notaMinima:
+          type: integer
+          nullable: true
+          example: null
+        completada:
+          type: boolean
+          example: false
+        fechaCompletada:
+          type: string
+          format: date-time
+          nullable: true
+        anteriorLeccionId:
+          type: integer
+          nullable: true
+          example: 13
+        siguienteLeccionId:
+          type: integer
+          nullable: true
+          example: 15
+        preguntas:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreguntaPublica'
+    CompletarLeccionResponse:
+      type: object
+      required:
+        [leccionId, completada, fechaCompletada, cursoCompletado, totalLecciones, leccionesCompletadas, porcentaje, siguienteLeccionId]
+      properties:
+        leccionId:
+          type: integer
+          example: 14
+        completada:
+          type: boolean
+          example: true
+        fechaCompletada:
+          type: string
+          format: date-time
+        cursoCompletado:
+          type: boolean
+          example: false
+        totalLecciones:
+          type: integer
+          example: 3
+        leccionesCompletadas:
+          type: integer
+          example: 2
+        porcentaje:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 67
+        siguienteLeccionId:
+          type: integer
+          nullable: true
+          example: 15
   responses:
     BadRequest:
       description: JSON mal formado o parámetros/query inválidos

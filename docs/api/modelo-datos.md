@@ -55,6 +55,7 @@ Todas las tablas tienen `id` (`INTEGER`, autoincremental) y `createdAt` / `updat
 |---|---|---|---|
 | `usuarioId` | `INTEGER` → `usuarios.id` | no | `ON DELETE CASCADE` |
 | `cursoId` | `INTEGER` → `cursos.id` | no | `ON DELETE CASCADE` (borrar un curso con inscritos lo impide el servicio, RN-06) |
+| `completado` | `BOOLEAN` | no | Agregada en `20261112000001-add-completado-inscripciones.cjs` (default `false`; se marca `true` al completar todas las lecciones). |
 
 ### `progresos_lecciones` (`ProgresoLeccion`)
 
@@ -88,6 +89,7 @@ Todas las tablas tienen `id` (`INTEGER`, autoincremental) y `createdAt` / `updat
 | `preguntas` | `leccionId` | | Preguntas de un cuestionario (FK). |
 | `inscripciones` | `usuarioId`, `cursoId` | UNIQUE | Sin doble inscripción (RN-04); cursos de un estudiante (FK). |
 | `inscripciones` | `cursoId` | | Inscritos de un curso (FK). |
+| `inscripciones` | `cursoId`, `completado` | | Conteo de estudiantes que completaron el curso (paso 09). |
 | `progresos_lecciones` | `usuarioId`, `leccionId` | UNIQUE | Un progreso por estudiante y lección (FK). |
 | `progresos_lecciones` | `leccionId` | | Avance por lección en el panel (FK). |
 | `intentos_cuestionarios` | `usuarioId`, `leccionId` | | Intentos de un estudiante en un cuestionario (FK). |
@@ -136,8 +138,7 @@ Cursos: uno publicado (3 lecciones; la 3.ª es un cuestionario de 2 preguntas) y
 
 | Plan | Estado actual | Paso que lo necesita |
 |---|---|---|
-| `inscripciones.completado` | No existe | 07 · 09 (`completaron`) |
-| `progresos` por `inscripcionId` con `intentos` y `mejorNota` | Progreso por `usuarioId` + tabla `intentos_cuestionarios` (intentos = `COUNT`, mejor nota = `MAX(puntaje)`) | 07 · 08 |
+| `progresos` por `inscripcionId` con `intentos` y `mejorNota` | Progreso por `usuarioId` + tabla `intentos_cuestionarios` (intentos = `COUNT`, mejor nota = `MAX(puntaje)`) | 08 |
 | Seed: 2 instructores, 3 estudiantes, 3 cursos × 5 lecciones | 1 instructor, 2 estudiantes, 2 cursos | 09 (panel con datos) |
 
 Cada cambio de esquema va en una migración nueva (`REGLAS.md` B.14).
