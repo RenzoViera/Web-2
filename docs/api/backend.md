@@ -109,6 +109,7 @@ cursoRoutes.post('/', authenticate, authorize(ROLES.INSTRUCTOR), validate({ body
 - `inscripcion.repository.js` (pasos 06 y 07): `create` (el UNIQUE rechaza duplicados), `findByUsuario` (paginado, con curso, instructor y `totalLecciones`, `leccionesCompletadas` y `siguienteLeccionId` por subconsultas correlacionadas: una consulta por página), `findByUsuarioAndCurso`, `lockByUsuarioAndCurso` y `updateCompletado`.
 - `progreso.repository.js` (paso 07): `findByUsuarioAndLecciones` (consulta por lote `IN`, sin N+1), `findByUsuarioAndLeccion` y `markCompletada` (idempotente).
 - `intento.repository.js` (paso 08): `getResumenByUsuarioAndLeccion` (`COUNT` + `MAX(puntaje)` en una consulta) y `create`. `respuestas` se guarda pero no está entre las columnas que se devuelven.
+- `instructor.repository.js` (paso 09): `getResumenGlobal` (agregaciones de cursos por estado, lecciones, inscritos y finalizaciones), `getCursoMetricas` (inscritos, completados, tasa y promedio de avance), `getCursoLeccionesMetricas` (conteo de finalizaciones por lección y estadísticas agregadas de cuestionarios con `AVG`/`COUNT`) y `findCursoEstudiantes` (paginado con búsqueda y filtro de estado).
 
 ## Avance (`services/progreso.service.js`) y middlewares de inscripción (`middlewares/isEnrolled.js`)
 
@@ -133,6 +134,14 @@ cursoRoutes.post('/', authenticate, authorize(ROLES.INSTRUCTOR), validate({ body
 
 El validador (`intentoSchema`) solo controla la forma: lista de 1 a 30 `{ preguntaId, indice }` sin preguntas repetidas e `indice` entre 0 y 5.
 - `middlewares/isEnrolled.js`: `isCourseEnrolled` y `isLeccionEnrolled` comparten `assertEnrolled` (404 si no existe el curso/lección, 403 `NOT_ENROLLED` si el estudiante no está inscrito, RN-08).
+
+## Panel del instructor (`services/instructor.service.js`, paso 09)
+
+Métricas agregadas directamente en la base de datos sin traer colecciones crudas a memoria (`REGLAS.md` B.25):
+
+- `GET /api/instructor/resumen`: totales acumulados del instructor en una sola respuesta: conteo de cursos desglosado por estado (`publicados`, `borradores`, `archivados`), total de lecciones, total de estudiantes matriculados en sus cursos, total de finalizaciones de curso y tasa porcentual de completitud general.
+- `GET /api/instructor/cursos/:id/resumen`: protegido por `isCourseOwner` (RN-07). Devuelve la cabecera del curso, métricas clave (`totalInscritos`, `totalCompletados`, `tasaCompletitud`, `promedioProgreso` calculado de forma exacta con el total de progresos completados entre inscritos y lecciones, y `totalLecciones`), y el desglose ordenado de avance por lección (conteo y tasa de estudiantes que la completaron; en cuestionarios incluye `totalIntentos`, `promedioPuntaje`, `totalEstudiantes` y `aprobados`).
+- `GET /api/instructor/cursos/:id/estudiantes`: paginado (`getPagination` / `buildPaginatedResponse`) con búsqueda (`q`) por nombre o correo (escapando `%` y `_`), y filtro opcional por `completado` (`true`/`false`). Incluye conteo de lecciones completadas por subconsulta SQL correlacionada y porcentaje de avance (`calcularPorcentaje`).
 
 ## Middlewares de propiedad (`middlewares/isCourseOwner.js`)
 
@@ -168,7 +177,8 @@ Capas mínimas: `routes/health.routes.js` → `controllers/health.controller.js`
 ## Swagger (`/api/docs`)
 
 - `api/docs/openapi.yaml` se parsea al arrancar y se sirve con swagger-ui-express; también en JSON en `/api/docs/openapi.json`.
-- Ya incluye componentes reutilizables: `bearerAuth`, schemas `Error`, `ErrorDetail`, `PaginationMeta`, parámetros `IdParam`, `PageQuery`, `LimitQuery` y respuestas `BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `UnprocessableEntity`, `InternalError`. Cada paso solo agrega sus `paths` referenciándolos con `$ref`.
+- En el paso 09 la especificación queda **100 % completa**: cubre las 23 rutas de la API y sus 51 esquemas con ejemplos de respuestas exitosas y errores (400, 401, 403, 404, 409, 422, 500).
+- Componentes reutilizables: `bearerAuth`, schemas `Error`, `ErrorDetail`, `PaginationMeta`, parámetros `IdParam`, `PageQuery`, `LimitQuery` y respuestas `BadRequest`, `Unauthorized`, `Forbidden`, `NotFound`, `Conflict`, `UnprocessableEntity`, `InternalError`.
 
 ## Logs (`utils/logger.js`)
 

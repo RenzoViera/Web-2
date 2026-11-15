@@ -143,6 +143,6 @@ Cursos: uno publicado (3 lecciones; la 3.ª es un cuestionario de 2 preguntas) y
 | Plan | Estado actual | Paso que lo necesita |
 |---|---|---|
 | `progresos` por `inscripcionId` con `intentos` y `mejorNota` | Progreso por `usuarioId` + tabla `intentos_cuestionarios` (intentos = `COUNT`, mejor nota = `MAX(puntaje)`). Resuelto en el paso 08 sin migración. | ✅ 08 |
-| Seed: 2 instructores, 3 estudiantes, 3 cursos × 5 lecciones | 1 instructor, 2 estudiantes, 2 cursos | 09 (panel con datos) |
+| Seed: 2 instructores, 3 estudiantes, 3 cursos × 5 lecciones | 2 instructores, 3 estudiantes, 3 cursos (seeder complementario `20261115000001-seed-panel.cjs` con progresos, intentos y cursos completados para el panel). | ✅ 09 |
 
 Cada cambio de esquema va en una migración nueva (`REGLAS.md` B.14).

@@ -1040,6 +1040,27 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
+  /instructor/resumen:
+    get:
+      tags: [Instructor]
+      summary: Resumen general de métricas del panel del instructor
+      description: Retorna métricas acumuladas de todos los cursos del instructor (conteo de cursos por estado, lecciones, inscritos, completados y tasa promedio).
+      operationId: getInstructorResumenGlobal
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen general de métricas del instructor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenGlobalInstructor'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /instructor/cursos:
     get:
       tags: [Instructor]
@@ -1081,6 +1102,75 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InstructorCursoDetalle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /instructor/cursos/{id}/resumen:
+    get:
+      tags: [Instructor]
+      summary: Métricas detalladas y avance por lección de un curso
+      description: Resumen métrico, KPIs de finalización y desglose de avance de cada lección (con estadísticas de cuestionarios si aplica). Solo para el instructor dueño del curso.
+      operationId: getInstructorCursoResumen
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Métricas y avance por lección del curso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumenCursoMetricas'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /instructor/cursos/{id}/estudiantes:
+    get:
+      tags: [Instructor]
+      summary: Listado paginado de estudiantes de un curso con avance
+      description: Lista paginada de estudiantes inscritos en el curso, con fecha de inscripción, porcentaje de avance y estado de completitud. Permite filtrar por término de búsqueda y estado completado. Solo para el instructor dueño.
+      operationId: getInstructorCursoEstudiantes
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+        - name: q
+          in: query
+          description: Término de búsqueda por nombre o email de estudiante
+          required: false
+          schema:
+            type: string
+        - name: completado
+          in: query
+          description: Filtrar por estado de finalización del curso
+          required: false
+          schema:
+            type: string
+            enum: ['true', 'false']
+      responses:
+        '200':
+          description: Listado paginado de estudiantes del curso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEstudiantesCursoResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -2119,6 +2209,256 @@ components:
           type: integer
           nullable: true
           example: 15
+    ResumenGlobalInstructor:
+      type: object
+      required:
+        - cursos
+        - totalLecciones
+        - totalInscritos
+        - totalCompletados
+        - tasaCompletitud
+      properties:
+        cursos:
+          type: object
+          required:
+            - total
+            - publicados
+            - borradores
+            - archivados
+          properties:
+            total:
+              type: integer
+              example: 3
+            publicados:
+              type: integer
+              example: 2
+            borradores:
+              type: integer
+              example: 1
+            archivados:
+              type: integer
+              example: 0
+        totalLecciones:
+          type: integer
+          example: 12
+        totalInscritos:
+          type: integer
+          example: 45
+        totalCompletados:
+          type: integer
+          example: 18
+        tasaCompletitud:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 40
+    MetricasCurso:
+      type: object
+      required:
+        - totalInscritos
+        - totalCompletados
+        - tasaCompletitud
+        - promedioProgreso
+        - totalLecciones
+      properties:
+        totalInscritos:
+          type: integer
+          example: 10
+        totalCompletados:
+          type: integer
+          example: 4
+        tasaCompletitud:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 40
+        promedioProgreso:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 68
+        totalLecciones:
+          type: integer
+          example: 3
+    QuizStats:
+      type: object
+      required:
+        - totalIntentos
+        - promedioPuntaje
+        - totalEstudiantes
+        - aprobados
+        - tasaAprobacion
+      properties:
+        totalIntentos:
+          type: integer
+          example: 8
+        promedioPuntaje:
+          type: integer
+          example: 78
+        totalEstudiantes:
+          type: integer
+          example: 6
+        aprobados:
+          type: integer
+          example: 4
+        tasaAprobacion:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 67
+    LeccionMetricaItem:
+      type: object
+      required:
+        - id
+        - titulo
+        - tipo
+        - orden
+        - completados
+        - tasaCompletitud
+      properties:
+        id:
+          type: integer
+          example: 1
+        titulo:
+          type: string
+          example: Variables y tipos de datos
+        tipo:
+          type: string
+          enum: [contenido, cuestionario]
+          example: contenido
+        orden:
+          type: integer
+          example: 1
+        notaMinima:
+          type: integer
+          nullable: true
+          example: null
+        completados:
+          type: integer
+          example: 10
+        tasaCompletitud:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 100
+        quizStats:
+          $ref: '#/components/schemas/QuizStats'
+          nullable: true
+    ResumenCursoMetricas:
+      type: object
+      required:
+        - curso
+        - metricas
+        - lecciones
+      properties:
+        curso:
+          type: object
+          required:
+            - id
+            - titulo
+            - estado
+            - categoria
+            - nivel
+            - createdAt
+            - updatedAt
+          properties:
+            id:
+              type: integer
+              example: 1
+            titulo:
+              type: string
+              example: Introducción a JavaScript Moderno
+            descripcion:
+              type: string
+              nullable: true
+              example: Aprende los fundamentos de JavaScript.
+            estado:
+              type: string
+              enum: [borrador, publicado, archivado]
+              example: publicado
+            categoria:
+              type: string
+              example: Programación
+            nivel:
+              type: string
+              enum: [principiante, intermedio, avanzado]
+              example: principiante
+            imagenUrl:
+              type: string
+              nullable: true
+              example: https://images.unsplash.com/photo-1579468118864-1b9ea3c0db4a
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+        metricas:
+          $ref: '#/components/schemas/MetricasCurso'
+        lecciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeccionMetricaItem'
+    EstudianteInscritoItem:
+      type: object
+      required:
+        - inscripcionId
+        - estudiante
+        - fechaInscripcion
+        - completado
+        - leccionesCompletadas
+        - totalLecciones
+        - porcentaje
+      properties:
+        inscripcionId:
+          type: integer
+          example: 1
+        estudiante:
+          type: object
+          required:
+            - id
+            - nombre
+            - email
+          properties:
+            id:
+              type: integer
+              example: 2
+            nombre:
+              type: string
+              example: Juan Estudiante
+            email:
+              type: string
+              format: email
+              example: estudiante1@miniaula.com
+        fechaInscripcion:
+          type: string
+          format: date-time
+        completado:
+          type: boolean
+          example: true
+        leccionesCompletadas:
+          type: integer
+          example: 3
+        totalLecciones:
+          type: integer
+          example: 3
+        porcentaje:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 100
+    PaginatedEstudiantesCursoResponse:
+      type: object
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstudianteInscritoItem'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
   responses:
     BadRequest:
       description: JSON mal formado o parámetros/query inválidos
