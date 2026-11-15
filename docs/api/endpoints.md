@@ -33,9 +33,11 @@ Cerrar sesión: stateless, el cliente borra el token (no hay endpoint).
 | PUT | `/cursos/:id` | Instructor dueño | Editar curso (al menos un campo) | ✅ Paso 04 |
 | DELETE | `/cursos/:id` | Instructor dueño | Eliminar (409 `COURSE_HAS_STUDENTS` con inscritos) | ✅ Paso 04 |
 | PATCH | `/cursos/:id/estado` | Instructor dueño | Publicar/archivar (422 `COURSE_CANNOT_PUBLISH_EMPTY` sin lecciones) | ✅ Paso 04 |
+| GET | `/instructor/resumen` | Instructor | Resumen métrico global acumulado del panel | ✅ Paso 09 |
 | GET | `/instructor/cursos` | Instructor | Mis cursos con conteo de lecciones e inscritos (paginado) | ✅ Paso 04 |
 | GET | `/instructor/cursos/:id` | Instructor dueño | Curso para el editor (con `indiceCorrecto`) | ✅ Paso 04 |
-| GET | `/instructor/cursos/:id/resumen` | Instructor dueño | Panel de métricas | ⏳ Paso 09 |
+| GET | `/instructor/cursos/:id/resumen` | Instructor dueño | Panel de métricas del curso y avance por lección | ✅ Paso 09 |
+| GET | `/instructor/cursos/:id/estudiantes` | Instructor dueño | Listado paginado de estudiantes con avance y estado | ✅ Paso 09 |
 
 ## Lecciones y preguntas
 

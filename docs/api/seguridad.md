@@ -44,6 +44,9 @@ Documento vivo (`REGLAS.md` B.13): todo cambio de roles, permisos o reglas de ac
 | `PATCH /cursos/:id/estado` | 401 | 403 | ✅ solo dueño (422 sin lecciones) |
 | `GET /instructor/cursos` | 401 | 403 | ✅ solo los propios |
 | `GET /instructor/cursos/:id` | 401 | 403 | ✅ solo dueño (con preguntas) |
+| `GET /instructor/resumen` | 401 | 403 | ✅ solo el propio |
+| `GET /instructor/cursos/:id/resumen` | 401 | 403 | ✅ solo dueño |
+| `GET /instructor/cursos/:id/estudiantes` | 401 | 403 | ✅ solo dueño |
 | `POST /cursos/:id/lecciones` | 401 | 403 | ✅ solo dueño |
 | `PATCH /cursos/:id/lecciones/orden` | 401 | 403 | ✅ solo dueño (422 si no vienen todas) |
 | `PUT /lecciones/:id` | 401 | 403 | ✅ solo dueño (tipo no editable) |
