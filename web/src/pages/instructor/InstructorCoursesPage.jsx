@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CourseCover } from '@/components/cursos/CourseCover';
-import { BookOpenIcon, PlusIcon, UsersIcon } from '@/components/icons';
+import { AwardIcon, BarChartIcon, BookOpenIcon, EditIcon, PlusIcon, TrendingUpIcon, UsersIcon } from '@/components/icons';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -9,17 +9,25 @@ import { LinkButton } from '@/components/ui/LinkButton';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { Pagination } from '@/components/ui/Pagination';
 import { useFetch } from '@/hooks/useFetch';
-import { instructorEditarCursoPath, PATHS } from '@/routes/paths';
+import { instructorCursoResumenPath, instructorEditarCursoPath, PATHS } from '@/routes/paths';
 import { cursosService } from '@/services/cursosService';
+import { instructorService } from '@/services/instructorService';
 import { ESTADO_BADGES, nivelLabel } from '@/utils/cursos';
 import { pluralize } from '@/utils/format';
 
 export default function InstructorCoursesPage() {
   const [page, setPage] = useState(1);
 
+  // Cursos paginados del instructor
   const { data, loading, error, refetch } = useFetch(
     ({ signal }) => cursosService.getInstructorCursos({ page, limit: 9 }, { signal }),
     [page],
+  );
+
+  // Resumen global independiente (REGLAS C.27)
+  const { data: resumen } = useFetch(
+    ({ signal }) => instructorService.getResumenGlobal({ signal }),
+    [],
   );
 
   if (loading) {
@@ -42,15 +50,15 @@ export default function InstructorCoursesPage() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 animate-fade-in">
-      <title>Mis cursos · Instructor · MiniAula</title>
+      <title>Panel del instructor · MiniAula</title>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-fg sm:text-3xl">
-            Cursos del instructor
+            Panel del instructor
           </h1>
           <p className="mt-1 text-sm text-fg-muted">
-            Gestiona tus cursos, lecciones y publica contenidos para tus estudiantes.
+            Gestiona tus cursos, lecciones, cuestionarios y monitorea el avance de tus estudiantes.
           </p>
         </div>
         <LinkButton
@@ -62,6 +70,50 @@ export default function InstructorCoursesPage() {
           Nuevo curso
         </LinkButton>
       </div>
+
+      {resumen && (
+        <section aria-label="Resumen general" className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Card className="flex flex-col gap-1 p-4">
+            <div className="flex items-center justify-between text-fg-subtle">
+              <span className="text-xs font-medium uppercase tracking-wider">Cursos</span>
+              <BookOpenIcon className="size-4 text-primary" />
+            </div>
+            <span className="text-2xl font-bold text-fg">{resumen.cursos.total}</span>
+            <span className="text-xs text-fg-muted">
+              {resumen.cursos.publicados} pub · {resumen.cursos.borradores} borrador
+            </span>
+          </Card>
+
+          <Card className="flex flex-col gap-1 p-4">
+            <div className="flex items-center justify-between text-fg-subtle">
+              <span className="text-xs font-medium uppercase tracking-wider">Inscritos</span>
+              <UsersIcon className="size-4 text-primary" />
+            </div>
+            <span className="text-2xl font-bold text-fg">{resumen.totalInscritos}</span>
+            <span className="text-xs text-fg-muted">
+              {pluralize(resumen.totalInscritos, 'estudiante', 'estudiantes')}
+            </span>
+          </Card>
+
+          <Card className="flex flex-col gap-1 p-4">
+            <div className="flex items-center justify-between text-fg-subtle">
+              <span className="text-xs font-medium uppercase tracking-wider">Completados</span>
+              <AwardIcon className="size-4 text-success" />
+            </div>
+            <span className="text-2xl font-bold text-fg">{resumen.totalCompletados}</span>
+            <span className="text-xs text-fg-muted">finalizaciones de curso</span>
+          </Card>
+
+          <Card className="flex flex-col gap-1 p-4">
+            <div className="flex items-center justify-between text-fg-subtle">
+              <span className="text-xs font-medium uppercase tracking-wider">Finalización</span>
+              <TrendingUpIcon className="size-4 text-primary" />
+            </div>
+            <span className="text-2xl font-bold text-fg">{resumen.tasaCompletitud}%</span>
+            <span className="text-xs text-fg-muted">tasa promedio</span>
+          </Card>
+        </section>
+      )}
 
       {cursos.length === 0 ? (
         <Card className="py-12">
@@ -119,13 +171,22 @@ export default function InstructorCoursesPage() {
                     </div>
                   </div>
 
-                  <div className="border-t border-border bg-surface-muted/50 p-4">
+                  <div className="grid grid-cols-2 gap-2 border-t border-border bg-surface-muted/50 p-4">
+                    <LinkButton
+                      to={instructorCursoResumenPath(curso.id)}
+                      variant="secondary"
+                      className="w-full justify-center text-xs sm:text-sm"
+                    >
+                      <BarChartIcon className="size-4" />
+                      Métricas
+                    </LinkButton>
                     <LinkButton
                       to={instructorEditarCursoPath(curso.id)}
-                      variant="secondary"
-                      className="w-full justify-center"
+                      variant="primary"
+                      className="w-full justify-center text-xs sm:text-sm"
                     >
-                      Editar curso
+                      <EditIcon className="size-4" />
+                      Editar
                     </LinkButton>
                   </div>
                 </Card>

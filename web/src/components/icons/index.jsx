@@ -224,3 +224,29 @@ export const ExternalLinkIcon = (props) => (
     <path d="M10 14 21 3" />
   </Icon>
 );
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const BarChartIcon = (props) => (
+  <Icon {...props}>
+    <line x1="12" y1="20" x2="12" y2="10" />
+    <line x1="18" y1="20" x2="18" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="16" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const TrendingUpIcon = (props) => (
+  <Icon {...props}>
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
+  </Icon>
+);
+
+/** @param {import('react').SVGProps<SVGSVGElement>} props */
+export const AwardIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="8" r="7" />
+    <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+  </Icon>
+);
+
