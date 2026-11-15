@@ -1,18 +1,22 @@
 import { useCallback, useMemo, useState } from 'react';
-import { isExpectedApiError } from '@/api/ApiError';
+import { ApiError, isExpectedApiError } from '@/api/ApiError';
 import { useFetch } from '@/hooks/useFetch';
 import { useToast } from '@/hooks/useToast';
+import { intentosService } from '@/services/intentosService';
 import { progresoService } from '@/services/progresoService';
 
 /** @typedef {import('@/services/progresoService').CursoProgreso} CursoProgreso */
 /** @typedef {import('@/services/progresoService').LeccionEstudiante} LeccionEstudiante */
-/** @typedef {import('@/services/progresoService').CompletarLeccionResponse} CompletarLeccionResponse */
+/** @typedef {import('@/services/progresoService').ResumenIntentos} ResumenIntentos */
+/** @typedef {import('@/services/intentosService').RespuestaIntento} RespuestaIntento */
+/** @typedef {import('@/services/intentosService').IntentoResultado} IntentoResultado */
+/** @typedef {{ fechaCompletada: string | null }} LeccionCompletadaPatch */
 
 /**
  * Aplica las lecciones completadas localmente en la sesión sobre el progreso cargado (REGLAS C.14),
  * recalculando el desbloqueo secuencial y totales en memoria sin refetch global.
  * @param {CursoProgreso} base
- * @param {Record<number, CompletarLeccionResponse>} overrides
+ * @param {Record<number, LeccionCompletadaPatch>} overrides
  * @returns {CursoProgreso}
  */
 const mergeProgreso = (base, overrides) => {
@@ -58,8 +62,21 @@ const mergeProgreso = (base, overrides) => {
 };
 
 /**
+ * Intentos más recientes entre los de la lección cargada y los registrados en la sesión (la lección pudo
+ * recargarse después de rendir).
+ * @param {ResumenIntentos | null} base
+ * @param {ResumenIntentos | undefined} patch
+ * @returns {ResumenIntentos | null}
+ */
+const latestIntentos = (base, patch) => {
+  if (!patch) return base;
+  if (!base) return patch;
+  return patch.realizados >= base.realizados ? patch : base;
+};
+
+/**
  * Carga en paralelo el avance del curso y la lección activa reutilizando `useFetch` (REGLAS C.20, C.27)
- * y actualiza el estado local al completar la lección sin refetch global (C.14).
+ * y actualiza el estado local al completar una lección o rendir un cuestionario, sin refetch global (C.14).
  *
  * @param {number | null} cursoId
  * @param {number | null} leccionId
@@ -67,8 +84,9 @@ const mergeProgreso = (base, overrides) => {
 export function useProgreso(cursoId, leccionId) {
   const toast = useToast();
   const [completedByCurso, setCompletedByCurso] = useState(
-    /** @type {Record<number, Record<number, CompletarLeccionResponse>>} */ ({}),
+    /** @type {Record<number, Record<number, LeccionCompletadaPatch>>} */ ({}),
   );
+  const [intentosByLeccion, setIntentosByLeccion] = useState(/** @type {Record<number, ResumenIntentos>} */ ({}));
 
   const {
     data: progresoBase,
@@ -100,30 +118,40 @@ export function useProgreso(cursoId, leccionId) {
 
   const leccion = useMemo(() => {
     if (!leccionBase || leccionBase.id !== leccionId) return null;
-    const patch = completedByCurso[leccionBase.cursoId]?.[leccionBase.id];
-    if (!patch || leccionBase.completada) return leccionBase;
+    const completadaPatch = completedByCurso[leccionBase.cursoId]?.[leccionBase.id];
+    const intentos = latestIntentos(leccionBase.intentos, intentosByLeccion[leccionBase.id]);
+    const completada = leccionBase.completada || Boolean(completadaPatch);
+    if (completada === leccionBase.completada && intentos === leccionBase.intentos) return leccionBase;
     return {
       ...leccionBase,
-      completada: true,
-      fechaCompletada: leccionBase.fechaCompletada ?? patch.fechaCompletada,
+      completada,
+      fechaCompletada: leccionBase.fechaCompletada ?? completadaPatch?.fechaCompletada ?? null,
+      intentos,
     };
-  }, [leccionBase, leccionId, completedByCurso]);
+  }, [leccionBase, leccionId, completedByCurso, intentosByLeccion]);
 
-  const baseCursoId = leccionBase?.cursoId;
+  const targetCursoId = leccionBase?.cursoId ?? cursoId;
+
+  /**
+   * @param {number} completadaId
+   * @param {string | null} fechaCompletada
+   */
+  const registrarCompletada = useCallback(
+    (completadaId, fechaCompletada) => {
+      if (!targetCursoId) return;
+      setCompletedByCurso((prev) => ({
+        ...prev,
+        [targetCursoId]: { ...(prev[targetCursoId] ?? {}), [completadaId]: { fechaCompletada } },
+      }));
+    },
+    [targetCursoId],
+  );
+
   const marcarCompletada = useCallback(async () => {
     if (!leccionId) return;
     try {
       const res = await progresoService.completarLeccion(leccionId);
-      const targetCursoId = baseCursoId ?? cursoId;
-      if (targetCursoId) {
-        setCompletedByCurso((prev) => ({
-          ...prev,
-          [targetCursoId]: {
-            ...(prev[targetCursoId] ?? {}),
-            [res.leccionId]: res,
-          },
-        }));
-      }
+      registrarCompletada(res.leccionId, res.fechaCompletada);
       toast.success(
         res.cursoCompletado
           ? '¡Felicitaciones! Completaste todas las lecciones del curso.'
@@ -133,7 +161,29 @@ export function useProgreso(cursoId, leccionId) {
       if (!isExpectedApiError(err)) throw err;
       if (err.status !== 401) toast.error(err.message);
     }
-  }, [baseCursoId, cursoId, leccionId, toast]);
+  }, [leccionId, registrarCompletada, toast]);
+
+  /**
+   * Rinde el cuestionario activo. Los errores se propagan para que el formulario los muestre; si la API dice que
+   * no quedan intentos (p. ej. se rindió en otra pestaña), recarga la lección para mostrar su estado real.
+   * @param {RespuestaIntento[]} respuestas
+   * @returns {Promise<IntentoResultado>}
+   */
+  const rendirCuestionario = useCallback(
+    async (respuestas) => {
+      if (!leccionId) throw new Error('No hay una lección activa para rendir.');
+      try {
+        const res = await intentosService.rendir(leccionId, respuestas);
+        setIntentosByLeccion((prev) => ({ ...prev, [res.leccionId]: res.intentos }));
+        if (res.completada) registrarCompletada(res.leccionId, res.fechaCompletada);
+        return res;
+      } catch (err) {
+        if (err instanceof ApiError && err.code === 'ATTEMPTS_EXHAUSTED') refetchLeccion();
+        throw err;
+      }
+    },
+    [leccionId, refetchLeccion, registrarCompletada],
+  );
 
   return {
     progreso,
@@ -145,5 +195,6 @@ export function useProgreso(cursoId, leccionId) {
     leccionError,
     refetchLeccion,
     marcarCompletada,
+    rendirCuestionario,
   };
 }
