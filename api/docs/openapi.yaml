@@ -46,6 +46,11 @@ tags:
     description: |
       Avance secuencial del estudiante inscrito (RN-01, RN-08). Una lección está desbloqueada solo cuando
       todas las anteriores por `orden` están completadas. Los cuestionarios nunca exponen `indiceCorrecto` (RN-02).
+  - name: Cuestionarios
+    description: |
+      Intentos del estudiante en un cuestionario. Se califica solo en el servidor y la respuesta trae la nota,
+      nunca cuáles eran las correctas (RN-02). Máximo 3 intentos por cuestionario; se conserva la mejor nota y el
+      cuestionario queda completado cuando la mejor nota alcanza la mínima (RN-01, RN-03).
 paths:
   /health:
     get:
@@ -597,7 +602,8 @@ paths:
       summary: Ver contenido de una lección desbloqueada (solo estudiante inscrito)
       description: |
         Valida inscripción (RN-08) y desbloqueo secuencial (RN-01: todas las lecciones anteriores completadas).
-        En cuestionarios devuelve las preguntas públicas sin `indiceCorrecto` (RN-02).
+        En cuestionarios devuelve las preguntas públicas sin `indiceCorrecto` (RN-02) y `intentos` (realizados,
+        restantes y mejor nota, RN-03); en lecciones de contenido `preguntas` es `[]` e `intentos` es `null`.
       operationId: getLeccionEstudiante
       security:
         - bearerAuth: []
@@ -759,6 +765,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /lecciones/{id}/intentos:
+    post:
+      tags: [Cuestionarios]
+      summary: Rendir un cuestionario (solo estudiante inscrito)
+      description: |
+        Califica en el servidor: `nota = round(aciertos / total * 100)`, aprobado si `nota >= notaMinima`.
+        Guarda el intento y, cuando la mejor nota alcanza la mínima, marca el cuestionario como completado
+        (desbloquea la lección siguiente y, si era la última pendiente, completa el curso). Un intento peor no
+        descompleta un cuestionario ya aprobado. Se puede volver a rendir uno aprobado mientras queden intentos.
+        La respuesta **no** indica qué respuestas eran correctas (RN-02). Todo ocurre en una transacción que
+        bloquea la inscripción, así que dos envíos simultáneos no superan el máximo de 3 intentos (RN-03).
+      operationId: rendirCuestionario
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntentoRequest'
+      responses:
+        '201':
+          description: Intento registrado con su nota, el estado de los intentos y el avance del curso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntentoResultado'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: |
+            No inscrito (`NOT_ENROLLED`), rol incorrecto (`FORBIDDEN`), lección bloqueada (`LESSON_LOCKED`) o sin
+            intentos disponibles (`ATTEMPTS_EXHAUSTED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  status: 403
+                  code: ATTEMPTS_EXHAUSTED
+                  message: Ya usaste los 3 intentos de este cuestionario.
+                  details: null
+                  requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+                  timestamp: '2026-11-14T12:00:00.000Z'
+        '404':
+          description: La lección no existe (`LESSON_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: |
+            Body inválido (`VALIDATION_ERROR`), la lección no es un cuestionario (`LESSON_NOT_QUIZ`), el cuestionario
+            no tiene preguntas (`QUIZ_WITHOUT_QUESTIONS`) o las respuestas no cubren exactamente sus preguntas con
+            opciones existentes (`INVALID_QUIZ_ANSWERS`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  status: 422
+                  code: INVALID_QUIZ_ANSWERS
+                  message: >-
+                    Tus respuestas no coinciden con las preguntas del cuestionario. Responde todas las preguntas e
+                    inténtalo de nuevo.
+                  details:
+                    - location: body
+                      field: respuestas
+                      message: Falta responder la pregunta 2
+                  requestId: 3f1c2a9e-5b7d-4c1e-9a2f-8d6b4e0c1a7f
+                  timestamp: '2026-11-14T12:00:00.000Z'
         '500':
           $ref: '#/components/responses/InternalError'
   /lecciones/{id}/preguntas:
@@ -1829,6 +1914,7 @@ components:
           anteriorLeccionId,
           siguienteLeccionId,
           preguntas,
+          intentos,
         ]
       properties:
         id:
@@ -1875,6 +1961,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PreguntaPublica'
+        intentos:
+          description: Intentos del cuestionario (`null` en lecciones de contenido).
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ResumenIntentos'
     CompletarLeccionResponse:
       type: object
       required:
@@ -1889,6 +1980,127 @@ components:
         fechaCompletada:
           type: string
           format: date-time
+        cursoCompletado:
+          type: boolean
+          example: false
+        totalLecciones:
+          type: integer
+          example: 3
+        leccionesCompletadas:
+          type: integer
+          example: 2
+        porcentaje:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 67
+        siguienteLeccionId:
+          type: integer
+          nullable: true
+          example: 15
+    ResumenIntentos:
+      type: object
+      description: Estado de los intentos de un cuestionario (RN-03).
+      required: [realizados, maximo, restantes, mejorNota]
+      properties:
+        realizados:
+          type: integer
+          example: 1
+        maximo:
+          type: integer
+          example: 3
+        restantes:
+          type: integer
+          example: 2
+        mejorNota:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Mejor nota entre los intentos (`null` si todavía no rindió).
+          example: 50
+    RespuestaIntento:
+      type: object
+      required: [preguntaId, indice]
+      properties:
+        preguntaId:
+          type: integer
+          example: 5
+        indice:
+          type: integer
+          minimum: 0
+          maximum: 5
+          description: Posición (desde 0) de la opción elegida.
+          example: 1
+    IntentoRequest:
+      type: object
+      required: [respuestas]
+      properties:
+        respuestas:
+          type: array
+          minItems: 1
+          maxItems: 30
+          description: Una respuesta por cada pregunta del cuestionario, sin repetir preguntas.
+          items:
+            $ref: '#/components/schemas/RespuestaIntento'
+      example:
+        respuestas:
+          - preguntaId: 5
+            indice: 0
+          - preguntaId: 6
+            indice: 2
+    IntentoResultado:
+      type: object
+      description: Resultado de un intento. No incluye qué respuestas eran correctas (RN-02).
+      required:
+        [
+          leccionId,
+          nota,
+          aprobado,
+          aciertos,
+          totalPreguntas,
+          notaMinima,
+          completada,
+          fechaCompletada,
+          intentos,
+          cursoCompletado,
+          totalLecciones,
+          leccionesCompletadas,
+          porcentaje,
+          siguienteLeccionId,
+        ]
+      properties:
+        leccionId:
+          type: integer
+          example: 15
+        nota:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 50
+        aprobado:
+          type: boolean
+          description: Si este intento alcanzó la nota mínima.
+          example: false
+        aciertos:
+          type: integer
+          example: 1
+        totalPreguntas:
+          type: integer
+          example: 2
+        notaMinima:
+          type: integer
+          example: 70
+        completada:
+          type: boolean
+          description: Si el cuestionario quedó completado (mejor nota ≥ mínima), aunque este intento no la alcance.
+          example: false
+        fechaCompletada:
+          type: string
+          format: date-time
+          nullable: true
+        intentos:
+          $ref: '#/components/schemas/ResumenIntentos'
         cursoCompletado:
           type: boolean
           example: false
