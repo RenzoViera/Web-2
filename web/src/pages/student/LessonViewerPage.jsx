@@ -1,7 +1,7 @@
 import { useParams } from 'react-router';
 import { ApiError } from '@/api/ApiError';
 import { ArrowLeftIcon, ArrowRightIcon, BookOpenIcon, CheckCircleIcon, LockIcon } from '@/components/icons';
-import { LessonQuizPreview } from '@/components/student/LessonQuizPreview';
+import { LessonQuiz } from '@/components/student/LessonQuiz';
 import { LessonSidebar } from '@/components/student/LessonSidebar';
 import { LessonVideo } from '@/components/student/LessonVideo';
 import { Badge } from '@/components/ui/Badge';
@@ -23,7 +23,7 @@ const parsePositiveId = (raw) => {
 
 /**
  * Vista de lección del estudiante inscrito: barra de avance lateral, desbloqueo secuencial (RN-01),
- * contenido/video y botón para marcar como completada (RF-10, RF-12).
+ * contenido/video y botón para marcar como completada (RF-10, RF-12) o el cuestionario con sus intentos (RF-15).
  */
 export default function LessonViewerPage() {
   const { cursoId: rawCursoId, leccionId: rawLeccionId } = useParams();
@@ -40,6 +40,7 @@ export default function LessonViewerPage() {
     leccionError,
     refetchLeccion,
     marcarCompletada,
+    rendirCuestionario,
   } = useProgreso(cursoId, leccionId);
 
   if (!cursoId || !leccionId) {
@@ -175,7 +176,12 @@ export default function LessonViewerPage() {
                 </header>
 
                 {leccion.tipo === 'cuestionario' ? (
-                  <LessonQuizPreview leccion={leccion} />
+                  <LessonQuiz
+                    key={leccion.id}
+                    leccion={leccion}
+                    siguientePath={leccion.siguienteLeccionId ? leccionPath(cursoId, leccion.siguienteLeccionId) : null}
+                    onSubmit={rendirCuestionario}
+                  />
                 ) : (
                   <>
                     {leccion.videoUrl && <LessonVideo videoUrl={leccion.videoUrl} titulo={leccion.titulo} />}
@@ -235,7 +241,11 @@ export default function LessonViewerPage() {
                   ) : (
                     <p className="flex items-center gap-1.5 text-sm text-fg-subtle sm:justify-end">
                       <LockIcon className="size-4" />
-                      <span>Completa esta lección para habilitar la siguiente</span>
+                      <span>
+                        {leccion.tipo === 'cuestionario'
+                          ? 'Aprueba el cuestionario para habilitar la siguiente'
+                          : 'Completa esta lección para habilitar la siguiente'}
+                      </span>
                     </p>
                   ))}
               </nav>
