@@ -50,6 +50,22 @@ export const findPublicByLeccion = (leccionId) =>
   });
 
 /**
+ * Claves para calificar un intento en el servidor (RN-02). Incluye `indiceCorrecto`: el resultado nunca se devuelve
+ * tal cual, el servicio solo expone la nota.
+ * @param {number} leccionId
+ * @param {{ transaction?: import('sequelize').Transaction }} [options]
+ * @returns {Promise<Array<{ id: number, opciones: string[], indiceCorrecto: number }>>}
+ */
+export const findClavesByLeccion = (leccionId, { transaction } = {}) =>
+  Pregunta.findAll({
+    where: { leccionId },
+    attributes: ['id', 'opciones', 'indiceCorrecto'],
+    order: [['id', 'ASC']],
+    raw: true,
+    transaction,
+  });
+
+/**
  * @param {number} leccionId
  * @returns {Promise<number>}
  */

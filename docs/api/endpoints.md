@@ -56,6 +56,6 @@ Cerrar sesión: stateless, el cliente borra el token (no hay endpoint).
 | POST | `/cursos/:id/inscripcion` | Estudiante | Inscribirse → 201; 404 si no está publicado; 409 `ALREADY_ENROLLED` | ✅ Paso 06 |
 | GET | `/inscripciones/mias` | Estudiante | Mis cursos (paginado) con conteos, `porcentaje` y `siguienteLeccionId` | ✅ Paso 06 |
 | `GET` | `/cursos/:id/progreso` | Estudiante inscrito | Estado secuencial de cada lección y porcentaje | ✅ Paso 07 |
-| `GET` | `/lecciones/:id` | Estudiante inscrito | Contenido y preguntas públicas (403 `LESSON_LOCKED` si bloqueada) | ✅ Paso 07 |
+| `GET` | `/lecciones/:id` | Estudiante inscrito | Contenido y preguntas públicas (403 `LESSON_LOCKED` si bloqueada); en cuestionarios, `intentos` (realizados, restantes, mejor nota) | ✅ Paso 07 / 08 |
 | `POST` | `/lecciones/:id/completar` | Estudiante inscrito | Marcar lección de contenido como completada (422 si cuestionario) | ✅ Paso 07 |
-| POST | `/lecciones/:id/intentos` | Estudiante inscrito | Rendir cuestionario (403 `ATTEMPTS_EXHAUSTED`) | ⏳ Paso 08 |
+| POST | `/lecciones/:id/intentos` | Estudiante inscrito | Rendir cuestionario → 201 con nota, mejor nota e intentos restantes (sin las correctas); 403 `ATTEMPTS_EXHAUSTED` al 4.º intento, 422 `INVALID_QUIZ_ANSWERS` si faltan respuestas | ✅ Paso 08 |

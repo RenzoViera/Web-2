@@ -1,11 +1,35 @@
 import { sequelize } from '../config/database.js';
 import { toPublicPregunta } from '../models/Pregunta.js';
 import * as inscripcionRepo from '../repositories/inscripcion.repository.js';
+import * as intentoRepo from '../repositories/intento.repository.js';
 import * as leccionRepo from '../repositories/leccion.repository.js';
 import * as preguntaRepo from '../repositories/pregunta.repository.js';
 import * as progresoRepo from '../repositories/progreso.repository.js';
 import { AppError } from '../utils/AppError.js';
 import { ERROR_CODES } from '../utils/errorCodes.js';
+import { MAX_INTENTOS_CUESTIONARIO } from '../validators/intento.validator.js';
+
+/**
+ * @typedef {{ completada: boolean, fechaCompletada: Date | null }} ProgresoItem
+ *
+ * @typedef {object} AvanceBloqueado Avance del estudiante leído con su inscripción bloqueada (`FOR UPDATE`).
+ * @property {{ id: number, completado: boolean }} inscripcion
+ * @property {Array<{ id: number, cursoId: number, titulo: string, tipo: string, orden: number, notaMinima: number | null }>} lecciones
+ * @property {Map<number, ProgresoItem>} progresoPorLeccion
+ *
+ * @typedef {object} AvanceCurso Resumen del curso que devuelven las acciones del estudiante (completar, rendir).
+ * @property {boolean} cursoCompletado
+ * @property {number} totalLecciones
+ * @property {number} leccionesCompletadas
+ * @property {number} porcentaje
+ * @property {number | null} siguienteLeccionId
+ *
+ * @typedef {object} ResumenIntentos Estado de los intentos de un cuestionario (RN-03).
+ * @property {number} realizados
+ * @property {number} maximo
+ * @property {number} restantes
+ * @property {number | null} mejorNota `null` si todavía no rindió.
+ */
 
 /**
  * Única fórmula del porcentaje de avance de una inscripción (Mis cursos, vista de lección y panel del instructor).
@@ -20,8 +44,22 @@ export const calcularPorcentaje = (completadas, total) => {
 };
 
 /**
+ * Intentos realizados, restantes y mejor nota de un cuestionario (RN-03: máximo `MAX_INTENTOS_CUESTIONARIO`).
+ * @param {number} realizados
+ * @param {number | null} mejorNota
+ * @returns {ResumenIntentos}
+ */
+export const resumirIntentos = (realizados, mejorNota) => ({
+  realizados,
+  maximo: MAX_INTENTOS_CUESTIONARIO,
+  restantes: Math.max(0, MAX_INTENTOS_CUESTIONARIO - realizados),
+  mejorNota,
+});
+
+/**
  * Construye el mapa de progresos indexado por `leccionId`.
  * @param {Array<{ leccionId: number, completada: boolean, fechaCompletada: Date | null }>} progresos
+ * @returns {Map<number, ProgresoItem>}
  */
 const mapProgresos = (progresos) => {
   const byLeccion = new Map();
@@ -34,8 +72,8 @@ const mapProgresos = (progresos) => {
 /**
  * Calcula estado secuencial de cada lección (RN-01) y totales agregados sin consultas extra.
  * Una lección está desbloqueada solo si todas las anteriores por `orden` están completadas.
- * @param {Array<{ id: number, cursoId: number, titulo: string, tipo: string, orden: number, notaMinima: number | null }>} lecciones
- * @param {Map<number, { completada: boolean, fechaCompletada: Date | null }>} progresoPorLeccion
+ * @param {AvanceBloqueado['lecciones']} lecciones
+ * @param {Map<number, ProgresoItem>} progresoPorLeccion
  */
 const buildProgresoResumen = (lecciones, progresoPorLeccion) => {
   let todasAnterioresCompletadas = true;
@@ -81,6 +119,18 @@ const buildProgresoResumen = (lecciones, progresoPorLeccion) => {
     siguienteLeccionId,
   };
 };
+
+/**
+ * @param {ReturnType<typeof buildProgresoResumen>} resumen
+ * @returns {AvanceCurso}
+ */
+const toAvanceCurso = (resumen) => ({
+  cursoCompletado: resumen.completado,
+  totalLecciones: resumen.totalLecciones,
+  leccionesCompletadas: resumen.leccionesCompletadas,
+  porcentaje: resumen.porcentaje,
+  siguienteLeccionId: resumen.siguienteLeccionId,
+});
 
 /**
  * Verifica que todas las lecciones anteriores por `orden` estén completadas (RN-01).
@@ -131,8 +181,23 @@ export const obtenerProgresoCurso = async (usuarioId, curso) => {
 };
 
 /**
+ * Preguntas públicas (sin `indiceCorrecto`, RN-02) e intentos del estudiante en un cuestionario.
+ * Son consultas independientes: van en paralelo (REGLAS B.27).
+ * @param {number} usuarioId
+ * @param {number} leccionId
+ */
+const obtenerCuestionario = async (usuarioId, leccionId) => {
+  const [preguntas, { realizados, mejorNota }] = await Promise.all([
+    preguntaRepo.findPublicByLeccion(leccionId),
+    intentoRepo.getResumenByUsuarioAndLeccion(usuarioId, leccionId),
+  ]);
+  return { preguntas: preguntas.map(toPublicPregunta), intentos: resumirIntentos(realizados, mejorNota) };
+};
+
+/**
  * Contenido de una lección para el estudiante inscrito, validando desbloqueo secuencial (RN-01).
- * En cuestionarios devuelve preguntas públicas sin `indiceCorrecto` (RN-02).
+ * En cuestionarios devuelve preguntas públicas sin `indiceCorrecto` (RN-02) y el estado de sus intentos (RN-03);
+ * en lecciones de contenido `preguntas` es `[]` e `intentos` es `null`.
  * @param {number} usuarioId
  * @param {import('../models/Leccion.js').Leccion & { curso?: { id: number, titulo: string, estado: string } }} leccion
  */
@@ -147,10 +212,10 @@ export const obtenerLeccionEstudiante = async (usuarioId, leccion) => {
 
   const progresoActual = progresoPorLeccion.get(leccion.id);
   const completada = Boolean(progresoActual?.completada);
-  const preguntas =
+  const { preguntas, intentos } =
     leccion.tipo === 'cuestionario'
-      ? (await preguntaRepo.findPublicByLeccion(leccion.id)).map(toPublicPregunta)
-      : [];
+      ? await obtenerCuestionario(usuarioId, leccion.id)
+      : { preguntas: [], intentos: null };
 
   return {
     id: leccion.id,
@@ -166,12 +231,71 @@ export const obtenerLeccionEstudiante = async (usuarioId, leccion) => {
     anteriorLeccionId: index > 0 ? lecciones[index - 1].id : null,
     siguienteLeccionId: index < lecciones.length - 1 ? lecciones[index + 1].id : null,
     preguntas,
+    intentos,
   };
 };
 
 /**
+ * Lee el avance del estudiante para modificarlo: bloquea su inscripción (`FOR UPDATE`) para serializar las
+ * escrituras concurrentes del mismo curso y verifica el desbloqueo secuencial de la lección (RN-01).
+ * Lo comparten completar una lección y rendir un cuestionario. Va dentro de una transacción.
+ * @param {number} usuarioId
+ * @param {{ id: number, cursoId: number }} leccion
+ * @param {import('sequelize').Transaction} transaction
+ * @returns {Promise<AvanceBloqueado>}
+ */
+export const bloquearAvance = async (usuarioId, leccion, transaction) => {
+  const inscripcion = await inscripcionRepo.lockByUsuarioAndCurso(usuarioId, leccion.cursoId, transaction);
+  if (!inscripcion) {
+    throw new AppError(403, ERROR_CODES.NOT_ENROLLED, 'No estás inscrito en este curso');
+  }
+
+  const lecciones = await leccionRepo.findResumenByCurso(leccion.cursoId, { transaction });
+  const progresos = await progresoRepo.findByUsuarioAndLecciones(
+    usuarioId,
+    lecciones.map((l) => l.id),
+    { transaction },
+  );
+  const progresoPorLeccion = mapProgresos(progresos);
+  assertLeccionDesbloqueada(leccion.id, lecciones, progresoPorLeccion);
+
+  return { inscripcion, lecciones, progresoPorLeccion };
+};
+
+/**
+ * Resumen del curso según el avance leído (sin escribir).
+ * @param {AvanceBloqueado} avance
+ * @returns {AvanceCurso}
+ */
+export const resumirAvance = (avance) => toAvanceCurso(buildProgresoResumen(avance.lecciones, avance.progresoPorLeccion));
+
+/**
+ * Marca la lección como completada (idempotente) y sincroniza `inscripciones.completado` al llegar al 100 %.
+ * Va en la misma transacción que `bloquearAvance`.
+ * @param {number} usuarioId
+ * @param {number} leccionId
+ * @param {AvanceBloqueado} avance
+ * @param {import('sequelize').Transaction} transaction
+ * @returns {Promise<{ fechaCompletada: Date | null, curso: AvanceCurso }>}
+ */
+export const marcarCompletadaEnAvance = async (usuarioId, leccionId, avance, transaction) => {
+  const progreso = await progresoRepo.markCompletada(usuarioId, leccionId, new Date(), { transaction });
+  const progresoPorLeccion = new Map(avance.progresoPorLeccion).set(leccionId, {
+    completada: true,
+    fechaCompletada: progreso.fechaCompletada,
+  });
+
+  const resumen = buildProgresoResumen(avance.lecciones, progresoPorLeccion);
+  if (Boolean(avance.inscripcion.completado) !== resumen.completado) {
+    await inscripcionRepo.updateCompletado(avance.inscripcion.id, resumen.completado, { transaction });
+  }
+
+  return { fechaCompletada: progreso.fechaCompletada, curso: toAvanceCurso(resumen) };
+};
+
+/**
  * Marca una lección de contenido como completada y actualiza `inscripciones.completado` en transacción.
- * Los cuestionarios solo se completan al aprobarlos (RN-01, paso 08).
+ * Los cuestionarios solo se completan al aprobarlos (RN-01, `cuestionario.service.js`).
  * @param {number} usuarioId
  * @param {{ id: number, cursoId: number, tipo: string }} leccion
  */
@@ -185,37 +309,8 @@ export const completarLeccion = (usuarioId, leccion) => {
   }
 
   return sequelize.transaction(async (transaction) => {
-    const inscripcion = await inscripcionRepo.lockByUsuarioAndCurso(usuarioId, leccion.cursoId, transaction);
-    if (!inscripcion) {
-      throw new AppError(403, ERROR_CODES.NOT_ENROLLED, 'No estás inscrito en este curso');
-    }
-
-    const lecciones = await leccionRepo.findResumenByCurso(leccion.cursoId, { transaction });
-    const progresos = await progresoRepo.findByUsuarioAndLecciones(
-      usuarioId,
-      lecciones.map((l) => l.id),
-      { transaction },
-    );
-    const progresoPorLeccion = mapProgresos(progresos);
-    assertLeccionDesbloqueada(leccion.id, lecciones, progresoPorLeccion);
-
-    const progreso = await progresoRepo.markCompletada(usuarioId, leccion.id, new Date(), { transaction });
-    progresoPorLeccion.set(leccion.id, { completada: true, fechaCompletada: progreso.fechaCompletada });
-
-    const resumen = buildProgresoResumen(lecciones, progresoPorLeccion);
-    if (Boolean(inscripcion.completado) !== resumen.completado) {
-      await inscripcionRepo.updateCompletado(inscripcion.id, resumen.completado, { transaction });
-    }
-
-    return {
-      leccionId: leccion.id,
-      completada: true,
-      fechaCompletada: progreso.fechaCompletada,
-      cursoCompletado: resumen.completado,
-      totalLecciones: resumen.totalLecciones,
-      leccionesCompletadas: resumen.leccionesCompletadas,
-      porcentaje: resumen.porcentaje,
-      siguienteLeccionId: resumen.siguienteLeccionId,
-    };
+    const avance = await bloquearAvance(usuarioId, leccion, transaction);
+    const { fechaCompletada, curso } = await marcarCompletadaEnAvance(usuarioId, leccion.id, avance, transaction);
+    return { leccionId: leccion.id, completada: true, fechaCompletada, ...curso };
   });
 };

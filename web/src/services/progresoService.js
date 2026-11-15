@@ -27,6 +27,12 @@ import { axiosClient } from '@/api/axiosClient';
  * @property {string} enunciado
  * @property {string[]} opciones
  *
+ * @typedef {object} ResumenIntentos Estado de los intentos de un cuestionario (RN-03).
+ * @property {number} realizados
+ * @property {number} maximo
+ * @property {number} restantes
+ * @property {number | null} mejorNota `null` si todavía no rindió.
+ *
  * @typedef {object} LeccionEstudiante
  * @property {number} id
  * @property {number} cursoId
@@ -40,7 +46,8 @@ import { axiosClient } from '@/api/axiosClient';
  * @property {string | null} fechaCompletada
  * @property {number | null} anteriorLeccionId
  * @property {number | null} siguienteLeccionId
- * @property {PreguntaPublica[]} preguntas
+ * @property {PreguntaPublica[]} preguntas `[]` en lecciones de contenido.
+ * @property {ResumenIntentos | null} intentos `null` en lecciones de contenido.
  *
  * @typedef {object} CompletarLeccionResponse
  * @property {number} leccionId
