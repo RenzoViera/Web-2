@@ -17,6 +17,7 @@ const RegisterPage = lazy(() => import('@/pages/public/RegisterPage'));
 const ProfilePage = lazy(() => import('@/pages/account/ProfilePage'));
 const NotFoundPage = lazy(() => import('@/pages/public/NotFoundPage'));
 const InstructorCoursesPage = lazy(() => import('@/pages/instructor/InstructorCoursesPage'));
+const CourseMetricsPage = lazy(() => import('@/pages/instructor/CourseMetricsPage'));
 const CourseEditorPage = lazy(() => import('@/pages/instructor/CourseEditorPage'));
 const LessonEditorPage = lazy(() => import('@/pages/instructor/LessonEditorPage'));
 const QuestionModalPage = lazy(() => import('@/pages/instructor/QuestionModalPage'));
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
                 element: <RoleRoute roles={[ROLES.INSTRUCTOR]} />,
                 children: [
                   { path: PATHS.instructorCursos, element: <InstructorCoursesPage /> },
+                  { path: PATHS.instructorCursoResumen, element: <CourseMetricsPage /> },
                   { path: PATHS.instructorNuevoCurso, element: <CourseEditorPage /> },
                   { path: PATHS.instructorEditarCurso, element: <CourseEditorPage /> },
                   { path: PATHS.instructorNuevaLeccion, element: <LessonEditorPage /> },
