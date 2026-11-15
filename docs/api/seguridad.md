@@ -37,6 +37,7 @@ Documento vivo (`REGLAS.md` B.13): todo cambio de roles, permisos o reglas de ac
 | `GET /cursos/:id/progreso` | 401 | ✅ solo si está inscrito (`403 NOT_ENROLLED`) | 403 |
 | `GET /lecciones/:id` | 401 | ✅ solo si está inscrito y desbloqueada (`403 LESSON_LOCKED`) | 403 |
 | `POST /lecciones/:id/completar` | 401 | ✅ solo contenido desbloqueado (`422` si cuestionario) | 403 |
+| `POST /lecciones/:id/intentos` | 401 | ✅ solo cuestionario desbloqueado, máx. 3 intentos (`403 ATTEMPTS_EXHAUSTED`) | 403 |
 | `POST /cursos` | 401 | 403 | ✅ crea borrador |
 | `PUT /cursos/:id` | 401 | 403 | ✅ solo dueño (403 ajeno) |
 | `DELETE /cursos/:id` | 401 | 403 | ✅ solo dueño (409 con inscritos) |
@@ -76,3 +77,6 @@ El resto de los endpoints y su acceso previsto están en [endpoints.md](endpoint
 20. El avance es estrictamente secuencial (RN-01): una lección está desbloqueada solo si todas las lecciones anteriores por `orden` están completadas en `progresos_lecciones`; tanto `GET /lecciones/:id` como `POST /lecciones/:id/completar` devuelven 403 `LESSON_LOCKED` si falta alguna anterior.
 21. Los cuestionarios no pueden marcarse como completados manualmente (`422 LESSON_NOT_CONTENT`): solo se completan al aprobarlos (paso 08). Al ver un cuestionario desbloqueado, `GET /lecciones/:id` devuelve preguntas mediante `PREGUNTA_PUBLIC_ATTRIBUTES` + `toPublicPregunta()` (sin `indiceCorrecto`, RN-02).
 22. Completar una lección toma bloqueo `FOR UPDATE` sobre la inscripción del estudiante y actualiza `inscripciones.completado` en la misma transacción.
+23. Los cuestionarios se califican solo en el servidor (RN-02): `cuestionario.service.js` lee `indiceCorrecto` con `findClavesByLeccion` y devuelve la nota y la cantidad de aciertos, nunca cuáles eran las correctas. El cliente solo manda `{ preguntaId, indice }`; se rechaza (422 `INVALID_QUIZ_ANSWERS`) si falta una pregunta, sobra una ajena o la opción no existe.
+24. Máximo 3 intentos por estudiante y cuestionario (RN-03, `MAX_INTENTOS_CUESTIONARIO`): el 4.º → 403 `ATTEMPTS_EXHAUSTED`. El conteo se lee después de tomar `FOR UPDATE` sobre la inscripción, así que dos envíos simultáneos no pueden registrar un 4.º intento.
+25. Un cuestionario queda completado cuando la mejor nota (`MAX(puntaje)`) alcanza `notaMinima` (RN-01); un intento peor no lo descompleta. Se puede volver a rendir uno aprobado mientras queden intentos (§6 del plan).

@@ -104,15 +104,34 @@ cursoRoutes.post('/', authenticate, authorize(ROLES.INSTRUCTOR), validate({ body
 - Los servicios los importan como namespace: `import * as usuarioRepository from '../repositories/usuario.repository.js'`.
 - `usuario.repository.js`: `findById`, `findByEmailWithPassword` (solo login), `findPasswordHash`, `create` (INSERT ... RETURNING) y `update` (UPDATE ... RETURNING, `null` si el usuario no existe).
 - `leccion.repository.js` (paso 05): `findByIdWithCurso`, `findByCurso`, `findIdsByCurso`, `getStatsByCurso` (total, mayor orden y cuestionarios sin preguntas en una consulta), `create`, `update`, `deleteById`, `compactOrden` y `reorder` (un solo `UPDATE` cada uno).
-- `pregunta.repository.js` (pasos 05 y 07): `findByIdWithCurso`, `findPublicByLeccion` (sin `indiceCorrecto`), `countByLeccion`, `create`, `update`, `deleteById`. Columnas del editor (`PREGUNTA_EDITOR_ATTRIBUTES`, con `indiceCorrecto`) vs públicas (`PREGUNTA_PUBLIC_ATTRIBUTES`).
+- `pregunta.repository.js` (pasos 05, 07 y 08): `findByIdWithCurso`, `findPublicByLeccion` (sin `indiceCorrecto`), `findClavesByLeccion` (`id`, `opciones`, `indiceCorrecto`: solo para calificar en el servidor), `countByLeccion`, `create`, `update`, `deleteById`. Columnas del editor (`PREGUNTA_EDITOR_ATTRIBUTES`, con `indiceCorrecto`) vs públicas (`PREGUNTA_PUBLIC_ATTRIBUTES`).
 - `curso.repository.js`: `findById`, `findEstadoById`, `lockById` (`SELECT ... FOR UPDATE`), `create`, `update`, `updateEstado`, `deleteById`, `countInscripciones`, `findInstructorCursos` (con conteo de lecciones e inscritos por subconsulta SQL sin N+1), `findInstructorCursoById` (con lecciones y preguntas completas para editor), `findPublicados` (solo publicados, búsqueda `q` por ILIKE en título con `%`/`_` escapados, filtros y paginación), `findPublicadoById` (temario público resumido + `inscrito` por `EXISTS` en la misma consulta) y `findCategoriasPublicadas` (`GROUP BY categoria`).
 - `inscripcion.repository.js` (pasos 06 y 07): `create` (el UNIQUE rechaza duplicados), `findByUsuario` (paginado, con curso, instructor y `totalLecciones`, `leccionesCompletadas` y `siguienteLeccionId` por subconsultas correlacionadas: una consulta por página), `findByUsuarioAndCurso`, `lockByUsuarioAndCurso` y `updateCompletado`.
 - `progreso.repository.js` (paso 07): `findByUsuarioAndLecciones` (consulta por lote `IN`, sin N+1), `findByUsuarioAndLeccion` y `markCompletada` (idempotente).
+- `intento.repository.js` (paso 08): `getResumenByUsuarioAndLeccion` (`COUNT` + `MAX(puntaje)` en una consulta) y `create`. `respuestas` se guarda pero no está entre las columnas que se devuelven.
 
 ## Avance (`services/progreso.service.js`) y middlewares de inscripción (`middlewares/isEnrolled.js`)
 
 - `calcularPorcentaje(completadas, total)` → entero 0-100 (0 si el curso no tiene lecciones). Única fórmula del porcentaje: la usan Mis cursos (paso 06), la vista de lección (07) y el panel (09).
-- `obtenerProgresoCurso`, `obtenerLeccionEstudiante` y `completarLeccion`: validan avance secuencial (RN-01: todas las anteriores por `orden` completadas), sanitizan preguntas con `toPublicPregunta()` (RN-02) y actualizan `inscripciones.completado` en transacción.
+- `obtenerProgresoCurso`, `obtenerLeccionEstudiante` y `completarLeccion`: validan avance secuencial (RN-01: todas las anteriores por `orden` completadas), sanitizan preguntas con `toPublicPregunta()` (RN-02) y actualizan `inscripciones.completado` en transacción. En cuestionarios, `obtenerLeccionEstudiante` agrega `intentos` (preguntas e intentos en paralelo).
+- Piezas compartidas por las escrituras del estudiante (completar y rendir), dentro de una transacción:
+  - `bloquearAvance(usuarioId, leccion, transaction)`: `FOR UPDATE` sobre la inscripción (403 `NOT_ENROLLED`), temario y progresos, y 403 `LESSON_LOCKED` si falta una anterior.
+  - `marcarCompletadaEnAvance(...)`: marca la lección (idempotente) y sincroniza `inscripciones.completado`.
+  - `resumirAvance(avance)`: resumen del curso sin escribir.
+  - `resumirIntentos(realizados, mejorNota)`: `{ realizados, maximo, restantes, mejorNota }`.
+
+## Cuestionarios (`services/cuestionario.service.js`, paso 08)
+
+`POST /lecciones/:id/intentos` → `rendirCuestionario(usuarioId, leccion, respuestas)`, en una transacción:
+
+1. 422 `LESSON_NOT_QUIZ` si no es cuestionario; `bloquearAvance` (403 `NOT_ENROLLED` / `LESSON_LOCKED`).
+2. Intentos y mejor nota (`COUNT`/`MAX`); 403 `ATTEMPTS_EXHAUSTED` si ya hay `MAX_INTENTOS_CUESTIONARIO` (3, en `validators/intento.validator.js`).
+3. Claves de las preguntas (`findClavesByLeccion`); 422 `QUIZ_WITHOUT_QUESTIONS` si no hay.
+4. `calificar`: una respuesta por pregunta, ninguna ajena y con opción existente (si no, 422 `INVALID_QUIZ_ANSWERS` con `details`); cuenta aciertos. `calcularNota` = `round(aciertos / total * 100)`.
+5. Guarda el intento (`numeroIntento` = realizados + 1). Si la mejor nota alcanza `notaMinima` y la lección no estaba completada, `marcarCompletadaEnAvance` (desbloquea la siguiente y puede completar el curso).
+6. Responde 201 con `nota`, `aprobado` (este intento), `aciertos`, `totalPreguntas`, `notaMinima`, `completada` (el cuestionario), `fechaCompletada`, `intentos` y el resumen del curso. Nunca cuáles eran las correctas (RN-02).
+
+El validador (`intentoSchema`) solo controla la forma: lista de 1 a 30 `{ preguntaId, indice }` sin preguntas repetidas e `indice` entre 0 y 5.
 - `middlewares/isEnrolled.js`: `isCourseEnrolled` y `isLeccionEnrolled` comparten `assertEnrolled` (404 si no existe el curso/lección, 403 `NOT_ENROLLED` si el estudiante no está inscrito, RN-08).
 
 ## Middlewares de propiedad (`middlewares/isCourseOwner.js`)

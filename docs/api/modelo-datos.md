@@ -72,10 +72,14 @@ Todas las tablas tienen `id` (`INTEGER`, autoincremental) y `createdAt` / `updat
 |---|---|---|---|---|
 | `usuarioId` | `INTEGER` → `usuarios.id` | no | | `ON DELETE CASCADE` |
 | `leccionId` | `INTEGER` → `lecciones.id` | no | | `ON DELETE CASCADE` |
-| `puntaje` | `INTEGER` | no | | 0–100 (validado en el modelo). |
-| `aprobado` | `BOOLEAN` | no | `false` | |
-| `respuestas` | `JSONB` | sí | | |
-| `numeroIntento` | `INTEGER` | no | `1` | |
+| `puntaje` | `INTEGER` | no | | Nota del intento, 0–100: `round(aciertos / total * 100)` (validado en el modelo). |
+| `aprobado` | `BOOLEAN` | no | `false` | Si **este** intento alcanzó `notaMinima`. |
+| `respuestas` | `JSONB` | sí | | `[{ preguntaId, indice }]` enviado por el estudiante (auditoría; nunca se devuelve). |
+| `numeroIntento` | `INTEGER` | no | `1` | 1..3 (RN-03). |
+
+Una fila por intento (paso 08). Intentos realizados = `COUNT(*)` y mejor nota = `MAX(puntaje)` por
+`(usuarioId, leccionId)`, en una sola consulta. Que el cuestionario esté aprobado se guarda en
+`progresos_lecciones.completada` (mejor nota ≥ mínima), igual que el resto de las lecciones.
 
 ## Índices
 
@@ -138,7 +142,7 @@ Cursos: uno publicado (3 lecciones; la 3.ª es un cuestionario de 2 preguntas) y
 
 | Plan | Estado actual | Paso que lo necesita |
 |---|---|---|
-| `progresos` por `inscripcionId` con `intentos` y `mejorNota` | Progreso por `usuarioId` + tabla `intentos_cuestionarios` (intentos = `COUNT`, mejor nota = `MAX(puntaje)`) | 08 |
+| `progresos` por `inscripcionId` con `intentos` y `mejorNota` | Progreso por `usuarioId` + tabla `intentos_cuestionarios` (intentos = `COUNT`, mejor nota = `MAX(puntaje)`). Resuelto en el paso 08 sin migración. | ✅ 08 |
 | Seed: 2 instructores, 3 estudiantes, 3 cursos × 5 lecciones | 1 instructor, 2 estudiantes, 2 cursos | 09 (panel con datos) |
 
 Cada cambio de esquema va en una migración nueva (`REGLAS.md` B.14).

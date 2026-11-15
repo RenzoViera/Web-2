@@ -6,19 +6,19 @@
 |---|---|
 | `config/env.js` | Lee y valida `VITE_API_URL` (la app no arranca sin ella). |
 | `api/` | `axiosClient.js` (instancia única: token, normalización de errores y 401) y `ApiError.js`. |
-| `services/` | Una función por endpoint, por dominio (`authService`, `cursosService`, `leccionesService`, `preguntasService`, `inscripcionesService`). **Único lugar que usa `axiosClient`.** |
+| `services/` | Una función por endpoint, por dominio (`authService`, `cursosService`, `leccionesService`, `preguntasService`, `inscripcionesService`, `progresoService`, `intentosService`). **Único lugar que usa `axiosClient`.** |
 | `context/` | `AuthContext` + `AuthProvider` (sesión) y `ToastContext` + `ToastProvider` (notificaciones). Contexto y provider van en archivos separados (Fast Refresh solo admite componentes en un `.jsx`). |
 | `hooks/` | `useAuth`, `useToast`, `useAppForm`, `useDismiss`, `useCopyToClipboard`, `useFetch`, `useDebouncedCallback` (+ `useProgreso` en el paso 07). |
 | `routes/` | `AppRouter.jsx`, `paths.js`, `ProtectedRoute`, `RoleRoute`, `GuestRoute`, `redirectState.js`. |
 | `components/ui/` | `Button`, `LinkButton`, `TextLink`, `Input`, `Textarea`, `PasswordInput`, `RadioCardGroup`, `Select`, `Alert`, `Avatar`, `Badge`, `Card`, `Modal`, `ConfirmDialog`, `Toaster`, `Spinner`, `PageLoader`, `ErrorMessage`, `EmptyState`, `Pagination`, `ProgressBar`. |
 | `components/cursos/` | Piezas de curso compartidas: `CourseCover`, `CourseCard`, `CategoryFilter`, `CourseSyllabus` (paso 06). |
-| `components/student/` | Piezas de las pantallas del estudiante: `EnrolledCourseCard` (paso 06). |
+| `components/student/` | Piezas de las pantallas del estudiante: `EnrolledCourseCard` (paso 06), `LessonSidebar`, `LessonVideo` (paso 07), `LessonQuiz`, `QuizForm`, `QuizResult` (paso 08). |
 | `components/instructor/` | Piezas de las pantallas del instructor: `LessonList`, `LessonForm`, `QuestionList`, `QuestionForm` (paso 05). |
 | `components/layout/` | `Layout`, `Navbar`, `UserMenu`, `UserSummary`, `GuestActions`, `NavItemLink`, `AuthCard`, `Logo`, `Footer`, `navItems.js`. |
 | `components/errors/` | `ErrorBoundary`, `RouteErrorBoundary`, `GlobalErrorListener`, `ErrorReportView`. |
 | `components/icons/` | Íconos SVG propios (sin librerías). |
 | `pages/public | account | student | instructor/` | Páginas por acceso (export default para `React.lazy`). `account/`: páginas de cualquier usuario con sesión, sin importar el rol (perfil). |
-| `utils/` | `cn`, `errorReport`, `authStorage`, `dedupeRequest`, `validation`, `roles`, `names`, `format` (`formatDate`, `pluralize`), `cursos` (`NIVEL_LABELS`, `ESTADO_BADGES`). |
+| `utils/` | `cn`, `errorReport`, `authStorage`, `dedupeRequest`, `validation`, `roles`, `names`, `format` (`formatDate`, `pluralize`), `cursos` (`NIVEL_LABELS`, `ESTADO_BADGES`), `video`, `cuestionarios` (`NOTA_MAXIMA`, `puedeMejorarNota`, `intentosRestantesLabel`). |
 
 Convenciones: componentes con export nombrado; páginas con export default; imports con alias `@/` (configurado en `vite.config.js` y `jsconfig.json`). Contratos con JSDoc y `checkJs` (se puede verificar con `npx -p typescript tsc --noEmit -p jsconfig.json`).
 
@@ -108,7 +108,7 @@ Tailwind v4 con `@theme`. Los componentes usan solo clases semánticas:
 - **Modal** (`title`, `description`, `onClose`, `closeDisabled`, `size: md | lg`, `footer`): portal al body, foco atrapado (prioriza `[data-autofocus]`), Escape y clic en el fondo cierran, devuelve el foco al cerrar y bloquea el scroll. En móvil es una hoja inferior.
 - **Input**: `label` obligatorio, `error`, `hint`, `required` (asterisco + `aria-required`), `end` (contenido a la derecha dentro del campo); `aria-invalid` + `aria-describedby`; compatible con `register()` (en React 19 `ref` es una prop).
 - **PasswordInput**: `Input` con botón mostrar/ocultar (`aria-pressed`; con el mouse no le quita el foco al campo, así no dispara la validación).
-- **RadioCardGroup**: opciones excluyentes como tarjetas (`legend`, `options: { value, label, description, icon }`, `error`, `hint`). Son radios nativos ocultos dentro de un `radiogroup`: teclado y lector de pantalla funcionan igual. Se le esparce `register('campo')`. Usado para elegir el rol al registrarse.
+- **RadioCardGroup**: opciones excluyentes como tarjetas (`legend`, `options: { value, label, description, icon }`, `variant`, `error`, `hint`). Son radios nativos ocultos dentro de un `radiogroup`: teclado y lector de pantalla funcionan igual. Se le esparce `register('campo')`. Variantes: `cards` (default, 2 columnas: rol al registrarse, tipo de lección) y `list` (una opción por fila con el enunciado destacado: preguntas de un cuestionario).
 - **Alert** (`error | warning | success | info`): mensaje en línea, p. ej. el error general de un formulario.
 - **Avatar** (iniciales, `sm | md | lg`), **Badge** (`neutral | primary`; antes de sumar variantes de color, verificar contraste AA: success/warning/danger sobre su `-soft` no llegan a 4.5:1), **Card** (`as="section"` opcional).
 - **Spinner** (`sm | md | lg`, `decorative` para usar dentro de botones), **PageLoader** (fallback de rutas lazy).
@@ -121,7 +121,13 @@ Tailwind v4 con `@theme`. Los componentes usan solo clases semánticas:
 - **Catálogo** (`pages/public/CatalogPage`): los filtros viven en la URL (`?q=&categoria=&page=`, `useSearchParams`). El buscador escribe en la URL con `useDebouncedCallback` (300 ms, `replace`) y se resincroniza si la URL cambia desde afuera (atrás/adelante). Cambiar un filtro vuelve a la página 1 sin mover el scroll; paginar sí sube. Las categorías son una sección independiente (`GET /cursos/categorias`, petición compartida con `dedupeRequest`) con su propia carga y error. Mientras carga un filtro nuevo no se muestran resultados viejos.
 - **Detalle** (`pages/public/CourseDetailPage`): la acción depende de quién mira (visitante → login con `state.from` para volver; estudiante → Inscribirme / Ir al curso; instructor → aviso). Inscribirse hace 1 request y actualiza el estado local (sin recargar el detalle); un 409 `ALREADY_ENROLLED` se toma como inscrito.
 - **Mis cursos** (`pages/student/MyCoursesPage`): `EnrolledCourseCard` con avance y botón Empezar (0 %) / Continuar / Repasar (100 %) a `siguienteLeccionId`. Los cursos archivados muestran su badge.
-- **Vista de lección** (`pages/student/LessonViewerPage`, paso 07): `useProgreso` carga en paralelo `GET /cursos/:id/progreso` y `GET /lecciones/:id` vía `useFetch` (estados y reintentos independientes por sección). `LessonSidebar` muestra el temario secuencial con candados en lecciones bloqueadas; `LessonVideo` embebe YouTube/Vimeo, `<video>` o enlace externo seguro (`utils/video.js`); `LessonQuizPreview` previsualiza preguntas públicas (sin `indiceCorrecto`) hasta el paso 08. Al marcar como completada se actualiza el estado local sin refetch global.
+- **Vista de lección** (`pages/student/LessonViewerPage`, paso 07): `useProgreso` carga en paralelo `GET /cursos/:id/progreso` y `GET /lecciones/:id` vía `useFetch` (estados y reintentos independientes por sección). `LessonSidebar` muestra el temario secuencial con candados en lecciones bloqueadas; `LessonVideo` embebe YouTube/Vimeo, `<video>` o enlace externo seguro (`utils/video.js`); Al marcar como completada se actualiza el estado local sin refetch global.
+- **Cuestionario** (paso 08, dentro de la misma vista de lección): `LessonQuiz` (montado con `key={leccion.id}`) elige qué mostrar:
+  - `QuizForm`: el próximo intento, con "Intento X de 3 · N preguntas · Nota mínima" y un `RadioCardGroup variant="list"` por pregunta. Usa `useAppForm` con un campo obligatorio por pregunta; las reglas se arman una vez al montar porque dependen de las preguntas.
+  - `QuizResult`: el intento recién enviado. Muestra `nota / 100`, Aprobado/Reprobado, aciertos, mejor nota e intentos restantes, con Siguiente lección / Reintentar / Volver a rendir. Recibe el foco al aparecer.
+  - Si ya está aprobado: el resumen de la mejor nota, y Volver a rendir mientras queden intentos y la nota no sea 100.
+  - Si se agotaron los intentos sin aprobar: un aviso.
+- `useProgreso.rendirCuestionario(respuestas)` hace 1 POST. Con la respuesta actualiza los intentos de la lección y, si quedó aprobado, el temario (desbloquea la siguiente y el porcentaje sin refetch). Los errores llegan al `formError` del formulario. Ante `ATTEMPTS_EXHAUSTED` (otra pestaña) recarga la lección.
 
 ## Layout y navegación
 

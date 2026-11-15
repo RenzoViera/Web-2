@@ -16,6 +16,7 @@
 | [pasos/paso-05.md](pasos/paso-05.md) | Registro del paso 05: lecciones y preguntas del instructor |
 | [pasos/paso-06.md](pasos/paso-06.md) | Registro del paso 06: catálogo, detalle, inscripción y Mis cursos |
 | [pasos/paso-07.md](pasos/paso-07.md) | Registro del paso 07: avance secuencial, vista de lección y completar |
+| [pasos/paso-08.md](pasos/paso-08.md) | Registro del paso 08: cuestionarios del estudiante (intentos, calificación y mejor nota) |
 
 Reglas de desarrollo: [../REGLAS.md](../REGLAS.md). Documentación interactiva de la API: `http://localhost:3000/api/docs`.
 
