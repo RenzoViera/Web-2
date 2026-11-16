@@ -18,6 +18,7 @@
 | [pasos/paso-07.md](pasos/paso-07.md) | Registro del paso 07: avance secuencial, vista de lección y completar |
 | [pasos/paso-08.md](pasos/paso-08.md) | Registro del paso 08: cuestionarios del estudiante (intentos, calificación y mejor nota) |
 | [pasos/paso-09.md](pasos/paso-09.md) | Registro del paso 09: panel del instructor y Swagger completo (API + Web) |
+| [pasos/paso-10.md](pasos/paso-10.md) | Registro del paso 10: pulido, panel completo (llegaron por lección y mayor caída), README y verificación final |
 
 Reglas de desarrollo: [../REGLAS.md](../REGLAS.md). Documentación interactiva de la API: `http://localhost:3000/api/docs`.
 

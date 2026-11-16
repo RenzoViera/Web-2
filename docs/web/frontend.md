@@ -10,10 +10,10 @@
 | `context/` | `AuthContext` + `AuthProvider` (sesión) y `ToastContext` + `ToastProvider` (notificaciones). Contexto y provider van en archivos separados (Fast Refresh solo admite componentes en un `.jsx`). |
 | `hooks/` | `useAuth`, `useToast`, `useAppForm`, `useDismiss`, `useCopyToClipboard`, `useFetch`, `useDebouncedCallback` (+ `useProgreso` en el paso 07). |
 | `routes/` | `AppRouter.jsx`, `paths.js`, `ProtectedRoute`, `RoleRoute`, `GuestRoute`, `redirectState.js`. |
-| `components/ui/` | `Button`, `LinkButton`, `TextLink`, `Input`, `Textarea`, `PasswordInput`, `RadioCardGroup`, `Select`, `Alert`, `Avatar`, `Badge`, `Card`, `Modal`, `ConfirmDialog`, `Toaster`, `Spinner`, `PageLoader`, `ErrorMessage`, `EmptyState`, `Pagination`, `ProgressBar`. |
+| `components/ui/` | `Button`, `LinkButton`, `TextLink`, `Input`, `Textarea`, `PasswordInput`, `RadioCardGroup`, `Select`, `Alert`, `Avatar`, `Badge`, `Card` (padding con la prop `padding`, no con `className`), `Modal`, `ConfirmDialog`, `Toaster`, `Spinner`, `PageLoader`, `ErrorMessage`, `EmptyState`, `Pagination`, `ProgressBar`, `StatCard`. |
 | `components/cursos/` | Piezas de curso compartidas: `CourseCover`, `CourseCard`, `CategoryFilter`, `CourseSyllabus` (paso 06). |
 | `components/student/` | Piezas de las pantallas del estudiante: `EnrolledCourseCard` (paso 06), `LessonSidebar`, `LessonVideo` (paso 07), `LessonQuiz`, `QuizForm`, `QuizResult` (paso 08). |
-| `components/instructor/` | Piezas de las pantallas del instructor: `LessonList`, `LessonForm`, `QuestionList`, `QuestionForm` (paso 05). |
+| `components/instructor/` | Piezas de las pantallas del instructor: `LessonList`, `LessonForm`, `QuestionList`, `QuestionForm` (paso 05); `InstructorSummary`, `InstructorCourseCard`, `LessonFunnel`, `CourseStudents` (panel, pasos 09-10). |
 | `components/layout/` | `Layout`, `Navbar`, `UserMenu`, `UserSummary`, `GuestActions`, `NavItemLink`, `AuthCard`, `Logo`, `Footer`, `navItems.js`. |
 | `components/errors/` | `ErrorBoundary`, `RouteErrorBoundary`, `GlobalErrorListener`, `ErrorReportView`. |
 | `components/icons/` | Íconos SVG propios (sin librerías). |
@@ -129,14 +129,15 @@ Tailwind v4 con `@theme`. Los componentes usan solo clases semánticas:
   - Si se agotaron los intentos sin aprobar: un aviso.
 - `useProgreso.rendirCuestionario(respuestas)` hace 1 POST. Con la respuesta actualiza los intentos de la lección y, si quedó aprobado, el temario (desbloquea la siguiente y el porcentaje sin refetch). Los errores llegan al `formError` del formulario. Ante `ATTEMPTS_EXHAUSTED` (otra pestaña) recarga la lección.
 
-## Panel del instructor y métricas (paso 09)
+## Panel del instructor (pasos 09-10)
 
-- **Panel general (`pages/instructor/InstructorCoursesPage`)**: incorpora tarjetas de resumen de alto nivel arriba del listado de cursos (`GET /api/instructor/resumen` con `useFetch` independiente, `REGLAS.md` C.27): total de cursos (desglose de publicados y borradores), total de estudiantes inscritos, total de cursos completados y tasa porcentual promedio de finalización. Cada tarjeta de curso incluye el botón **Métricas** (`/instructor/cursos/:id/resumen`).
-- **Métricas detalladas del curso (`pages/instructor/CourseMetricsPage`)**:
-  - Cabecera con datos del curso, portada, badges y botón para ir al editor de lecciones.
-  - KPI Cards principales: inscritos, finalizados, tasa de finalización (%) y avance promedio (%) con `ProgressBar`.
-  - **Embudo de avance por lección**: gráfico de barras con Tailwind mostrando la tasa de completitud por lección (`X de Y estudiantes`). Para lecciones de tipo cuestionario, tarjeta con nota mínima, intentos totales, promedio de notas (sobre 100) y estudiantes aprobados.
-  - **Listado de estudiantes inscritos**: buscador con debounce (`useDebouncedCallback`, 300 ms), filtros rápidos por estado (Todos, Completados, En progreso), tabla semántica en escritorio y cards en móvil (`REGLAS.md` C.25), con avatar de iniciales, fecha formateada, barra de avance (`X de Y lecciones`) y paginación con `Pagination`. Los filtros y paginación de alumnos no recargan las métricas generales (`REGLAS.md` C.14).
+- **Mis cursos del instructor (`pages/instructor/InstructorCoursesPage`)**: dos secciones independientes (`REGLAS.md` C.27), cada una con su carga y su error: `InstructorSummary` (`GET /instructor/resumen`: cursos por estado, inscritos, completaron y tasa de finalización) y el listado paginado de `InstructorCourseCard` con los botones **Panel** (`/instructor/cursos/:id/resumen`) y **Editar**.
+- **Panel del curso (`pages/instructor/CourseMetricsPage`)**, una petición para las métricas (`GET /instructor/cursos/:id/resumen`):
+  - Cabecera con portada, badges y acceso al editor.
+  - 4 `StatCard` (`components/ui/StatCard`, compartida con el resumen global): Inscritos, Completaron (con la tasa), Progreso promedio (con `ProgressBar`) y Nota promedio (mejor nota por estudiante y cuestionario; "—" si nadie rindió).
+  - `LessonFunnel` (`components/instructor/`): "Estudiantes que llegaron a cada lección", una barra por lección (`llegaron` / inscritos) con el número como texto al lado (alternativa accesible, C.32), cuántos la completaron y cuántos están detenidos ahí. Arriba, un `Alert` "Mayor caída: N estudiantes se detienen en la lección …", y esa lección resaltada con el badge **Mayor caída**. En cuestionarios, nota mínima, intentos, promedio y aprobados.
+  - Estados vacíos: "Este curso aún no tiene lecciones" (con acceso al editor) y "Aún no hay inscritos" (sin pedir el listado de estudiantes, C.29).
+  - `CourseStudents` (`components/instructor/`): sección con su propia petición (`GET /instructor/cursos/:id/estudiantes`); búsqueda con debounce de 300 ms, filtros Todos / Completados / En progreso (`aria-pressed`), tabla en escritorio y cards en móvil (C.25) y `Pagination`. Sus filtros no vuelven a pedir las métricas (C.14).
 
 ## Layout y navegación
 
@@ -170,7 +171,7 @@ Layout (errorElement: pantalla completa)
    │  │  └─ /cursos/:cursoId/lecciones/:leccionId   LessonViewerPage (vista de lección, paso 07)
    │  └─ RoleRoute instructor
    │     ├─ /instructor/cursos                              InstructorCoursesPage
-   │     ├─ /instructor/cursos/:id/resumen                  CourseMetricsPage (métricas, paso 09)
+   │     ├─ /instructor/cursos/:id/resumen                  CourseMetricsPage (panel del curso)
    │     ├─ /instructor/cursos/nuevo · /:id/editar          CourseEditorPage (temario con LessonList)
    │     ├─ /instructor/cursos/:cursoId/lecciones/nueva     LessonEditorPage
    │     └─ /instructor/cursos/:cursoId/lecciones/:leccionId/editar   LessonEditorPage (<Outlet />)
@@ -193,7 +194,7 @@ El aviso (`ErrorReportView`) tiene 2 niveles: mensaje para el usuario con botone
 
 Los errores esperados (validación, 4xx de negocio) **no** usan este aviso: se muestran en el formulario, con toast o con `ErrorMessage`.
 
-## Pendientes de frontend para próximos pasos
+## Patrones de referencia
 
 - Modal con URL propia (C.40): patrón de referencia en `LessonEditorPage` + `QuestionModalPage` (ruta hija, `<Suspense>` alrededor del `<Outlet />` para no tapar la página al cargar el modal lazy, cerrar con `navigate(-1)` o al padre si `location.key === 'default'`).
 

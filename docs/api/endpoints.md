@@ -36,7 +36,7 @@ Cerrar sesión: stateless, el cliente borra el token (no hay endpoint).
 | GET | `/instructor/resumen` | Instructor | Resumen métrico global acumulado del panel | ✅ Paso 09 |
 | GET | `/instructor/cursos` | Instructor | Mis cursos con conteo de lecciones e inscritos (paginado) | ✅ Paso 04 |
 | GET | `/instructor/cursos/:id` | Instructor dueño | Curso para el editor (con `indiceCorrecto`) | ✅ Paso 04 |
-| GET | `/instructor/cursos/:id/resumen` | Instructor dueño | Panel de métricas del curso y avance por lección | ✅ Paso 09 |
+| GET | `/instructor/cursos/:id/resumen` | Instructor dueño | Panel del curso: métricas (con nota promedio), avance por lección (`llegaron`, `detenidos`) y `mayorCaida` | ✅ Paso 09 / 10 |
 | GET | `/instructor/cursos/:id/estudiantes` | Instructor dueño | Listado paginado de estudiantes con avance y estado | ✅ Paso 09 |
 
 ## Lecciones y preguntas
