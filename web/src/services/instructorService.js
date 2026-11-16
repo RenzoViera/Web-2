@@ -15,6 +15,7 @@ import { axiosClient } from '@/api/axiosClient';
  * @property {number} totalCompletados
  * @property {number} tasaCompletitud
  * @property {number} promedioProgreso
+ * @property {number | null} notaPromedio Promedio de la mejor nota por estudiante y cuestionario (`null` si nadie rindió).
  * @property {number} totalLecciones
  */
 
@@ -36,7 +37,17 @@ import { axiosClient } from '@/api/axiosClient';
  * @property {number | null} notaMinima
  * @property {number} completados
  * @property {number} tasaCompletitud
+ * @property {number} llegaron Inscritos con la lección desbloqueada (completaron todas las anteriores).
+ * @property {number} detenidos Inscritos cuya primera lección sin completar es esta.
  * @property {QuizStats | null} quizStats
+ */
+
+/**
+ * @typedef {object} MayorCaida
+ * @property {number} leccionId
+ * @property {string} titulo
+ * @property {number} orden
+ * @property {number} estudiantes
  */
 
 /**
@@ -44,6 +55,7 @@ import { axiosClient } from '@/api/axiosClient';
  * @property {import('./cursosService').CursoBase} curso
  * @property {MetricasCurso} metricas
  * @property {LeccionMetricaItem[]} lecciones
+ * @property {MayorCaida | null} mayorCaida Lección donde se detienen más estudiantes.
  */
 
 /**
