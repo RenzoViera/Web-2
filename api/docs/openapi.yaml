@@ -2259,6 +2259,7 @@ components:
         - totalCompletados
         - tasaCompletitud
         - promedioProgreso
+        - notaPromedio
         - totalLecciones
       properties:
         totalInscritos:
@@ -2277,6 +2278,13 @@ components:
           minimum: 0
           maximum: 100
           example: 68
+        notaPromedio:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+          description: Promedio de la mejor nota de cada estudiante en cada cuestionario rendido (`null` si nadie rindió).
+          example: 81
         totalLecciones:
           type: integer
           example: 3
@@ -2315,6 +2323,8 @@ components:
         - orden
         - completados
         - tasaCompletitud
+        - llegaron
+        - detenidos
       properties:
         id:
           type: integer
@@ -2341,6 +2351,14 @@ components:
           minimum: 0
           maximum: 100
           example: 100
+        llegaron:
+          type: integer
+          description: Inscritos que tienen la lección desbloqueada (completaron todas las anteriores).
+          example: 10
+        detenidos:
+          type: integer
+          description: Inscritos cuya primera lección sin completar es esta.
+          example: 2
         quizStats:
           $ref: '#/components/schemas/QuizStats'
           nullable: true
@@ -2350,6 +2368,7 @@ components:
         - curso
         - metricas
         - lecciones
+        - mayorCaida
       properties:
         curso:
           type: object
@@ -2399,6 +2418,24 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LeccionMetricaItem'
+        mayorCaida:
+          type: object
+          nullable: true
+          description: Lección donde se detienen más estudiantes (`null` si nadie está detenido).
+          required: [leccionId, titulo, orden, estudiantes]
+          properties:
+            leccionId:
+              type: integer
+              example: 3
+            titulo:
+              type: string
+              example: Evaluación del Módulo 1
+            orden:
+              type: integer
+              example: 3
+            estudiantes:
+              type: integer
+              example: 4
     EstudianteInscritoItem:
       type: object
       required:
