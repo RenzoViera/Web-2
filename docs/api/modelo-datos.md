@@ -128,21 +128,27 @@ para filtrar por su primera columna (`REGLAS.md` B.21).
 
 ## Datos de prueba (seed)
 
-`20261104000001-seed-inicial.cjs` (corre una sola vez, `seederStorage: 'sequelize'`). Contraseña de todos: `Password123!`.
+Dos seeders (corren una sola vez, `seederStorage: 'sequelize'`): `20261104000001-seed-inicial.cjs` y el complementario del panel `20261115000001-seed-panel.cjs`. Contraseña de todos: `Password123!`.
 
-| Email | Rol |
-|---|---|
-| `instructor@miniaula.com` | instructor |
-| `estudiante1@miniaula.com` | estudiante (inscrito en el curso publicado, lección 1 completada) |
-| `estudiante2@miniaula.com` | estudiante |
+| Email | Rol | Datos |
+|---|---|---|
+| `instructor@miniaula.com` | instructor | Dueño de los 3 cursos |
+| `instructor2@miniaula.com` | instructor | Sin cursos (sirve para probar el 403 sobre cursos ajenos) |
+| `estudiante1@miniaula.com` | estudiante | JavaScript Moderno **completado** (cuestionario aprobado con 100) |
+| `estudiante2@miniaula.com` | estudiante | JavaScript Moderno: lecciones 1 y 2 hechas, cuestionario reprobado (50) → detenido en la lección 3 |
+| `estudiante3@miniaula.com` | estudiante | Backend con Node.js: lección 1 hecha |
 
-Cursos: uno publicado (3 lecciones; la 3.ª es un cuestionario de 2 preguntas) y uno en borrador.
+| Curso | Estado | Lecciones |
+|---|---|---|
+| Introducción a JavaScript Moderno | publicado | 3 (la 3.ª es un cuestionario de 2 preguntas, nota mínima 70) |
+| Backend Profesional con Node.js y Express | publicado | 2 de contenido |
+| Desarrollo Frontend con React y Tailwind CSS | borrador | — |
 
-## Diferencias con el plan (pendientes)
+## Diferencias con el plan
 
 | Plan | Estado actual | Paso que lo necesita |
 |---|---|---|
 | `progresos` por `inscripcionId` con `intentos` y `mejorNota` | Progreso por `usuarioId` + tabla `intentos_cuestionarios` (intentos = `COUNT`, mejor nota = `MAX(puntaje)`). Resuelto en el paso 08 sin migración. | ✅ 08 |
-| Seed: 2 instructores, 3 estudiantes, 3 cursos × 5 lecciones | 2 instructores, 3 estudiantes, 3 cursos (seeder complementario `20261115000001-seed-panel.cjs` con progresos, intentos y cursos completados para el panel). | ✅ 09 |
+| Seed: 2 instructores, 3 estudiantes, 3 cursos publicados × 5 lecciones (cuestionario en la 4.ª) + 1 borrador | 2 instructores, 3 estudiantes, 2 cursos publicados (3 y 2 lecciones; un cuestionario) + 1 borrador, con progresos, intentos y un curso completado para el panel. Alcanza para recorrer todos los flujos; no se amplió para no reescribir seeders ya aplicados (`REGLAS.md` B.14). | ✅ 09 |
 
 Cada cambio de esquema va en una migración nueva (`REGLAS.md` B.14).

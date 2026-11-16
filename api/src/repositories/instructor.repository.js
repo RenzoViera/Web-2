@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database.js';
 import { Curso, Inscripcion, IntentoCuestionario, Leccion, ProgresoLeccion, Usuario } from '../models/index.js';
 
@@ -17,12 +17,20 @@ const LECCIONES_COMPLETADAS_SUBQUERY = [
  * @param {number} instructorId
  */
 export const getResumenGlobal = async (instructorId) => {
-  const cursosPorEstado = await Curso.findAll({
-    where: { instructorId },
-    attributes: ['estado', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-    group: ['estado'],
-    raw: true,
-  });
+  const delInstructor = [{ model: Curso, as: 'curso', where: { instructorId }, attributes: [] }];
+
+  // Consultas independientes y fuera de transacción: en paralelo (REGLAS B.27).
+  const [cursosPorEstado, totalLecciones, totalInscritos, totalCompletados] = await Promise.all([
+    Curso.findAll({
+      where: { instructorId },
+      attributes: ['estado', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
+      group: ['estado'],
+      raw: true,
+    }),
+    Leccion.count({ include: delInstructor }),
+    Inscripcion.count({ include: delInstructor }),
+    Inscripcion.count({ where: { completado: true }, include: delInstructor }),
+  ]);
 
   const estadoCounts = {
     publicado: 0,
@@ -37,40 +45,6 @@ export const getResumenGlobal = async (instructorId) => {
       estadoCounts[row.estado] = count;
     }
   }
-
-  const totalLecciones = await Leccion.count({
-    include: [
-      {
-        model: Curso,
-        as: 'curso',
-        where: { instructorId },
-        attributes: [],
-      },
-    ],
-  });
-
-  const totalInscritos = await Inscripcion.count({
-    include: [
-      {
-        model: Curso,
-        as: 'curso',
-        where: { instructorId },
-        attributes: [],
-      },
-    ],
-  });
-
-  const totalCompletados = await Inscripcion.count({
-    where: { completado: true },
-    include: [
-      {
-        model: Curso,
-        as: 'curso',
-        where: { instructorId },
-        attributes: [],
-      },
-    ],
-  });
 
   const tasaCompletitud = totalInscritos > 0 ? Math.round((totalCompletados / totalInscritos) * 100) : 0;
 
@@ -89,40 +63,64 @@ export const getResumenGlobal = async (instructorId) => {
 };
 
 /**
- * Métricas generales de un curso específico.
+ * Conteos generales de un curso: inscritos, completados, lecciones completadas en total y nota promedio (promedio de
+ * la mejor nota de cada estudiante en cada cuestionario que rindió; `null` si nadie rindió). Consultas independientes,
+ * en paralelo (REGLAS B.27).
  * @param {number} cursoId
+ * @returns {Promise<{ totalInscritos: number, totalCompletados: number, totalProgresos: number, notaPromedio: number | null }>}
  */
-export const getCursoMetricas = async (cursoId) => {
-  const totalLecciones = await Leccion.count({ where: { cursoId } });
-  const totalInscritos = await Inscripcion.count({ where: { cursoId } });
-  const totalCompletados = await Inscripcion.count({ where: { cursoId, completado: true } });
-
-  const totalProgresos = await ProgresoLeccion.count({
-    where: { completada: true },
-    include: [
-      {
-        model: Leccion,
-        as: 'leccion',
-        where: { cursoId },
-        attributes: [],
-      },
-    ],
-  });
-
-  const tasaCompletitud = totalInscritos > 0 ? Math.round((totalCompletados / totalInscritos) * 100) : 0;
-  const promedioProgreso =
-    totalInscritos > 0 && totalLecciones > 0
-      ? Math.round((totalProgresos / (totalInscritos * totalLecciones)) * 100)
-      : 0;
-
-  return {
-    totalInscritos,
-    totalCompletados,
-    tasaCompletitud,
-    promedioProgreso,
-    totalLecciones,
-  };
+export const getCursoConteos = async (cursoId) => {
+  const [totalInscritos, totalCompletados, totalProgresos, [nota]] = await Promise.all([
+    Inscripcion.count({ where: { cursoId } }),
+    Inscripcion.count({ where: { cursoId, completado: true } }),
+    ProgresoLeccion.count({
+      where: { completada: true },
+      include: [{ model: Leccion, as: 'leccion', where: { cursoId }, attributes: [] }],
+    }),
+    sequelize.query(
+      `SELECT ROUND(AVG(mejor.nota))::int AS "notaPromedio"
+         FROM (
+               SELECT MAX(ic.puntaje) AS nota
+                 FROM intentos_cuestionarios ic
+                 JOIN lecciones l ON l.id = ic."leccionId"
+                WHERE l."cursoId" = :cursoId
+                GROUP BY ic."usuarioId", ic."leccionId"
+              ) mejor`,
+      { replacements: { cursoId }, type: QueryTypes.SELECT },
+    ),
+  ]);
+  const { notaPromedio } = /** @type {{ notaPromedio: number | null }} */ (nota);
+  return { totalInscritos, totalCompletados, totalProgresos, notaPromedio };
 };
+
+/**
+ * Por lección, cuántos estudiantes inscritos (sin el curso terminado) la tienen como **primera lección no completada**:
+ * es donde están detenidos. Los que completaron todas no aparecen. Una sola consulta agregada (REGLAS B.25).
+ * @param {number} cursoId
+ * @returns {Promise<Array<{ leccionId: number, detenidos: number }>>}
+ */
+export const getDetenidosPorLeccion = (cursoId) =>
+  sequelize.query(
+    `SELECT pendiente.id AS "leccionId", COUNT(*)::int AS "detenidos"
+       FROM inscripciones i
+       JOIN LATERAL (
+              SELECT l.id
+                FROM lecciones l
+               WHERE l."cursoId" = i."cursoId"
+                 AND NOT EXISTS (
+                       SELECT 1
+                         FROM progresos_lecciones p
+                        WHERE p."leccionId" = l.id
+                          AND p."usuarioId" = i."usuarioId"
+                          AND p.completada = true
+                     )
+               ORDER BY l.orden
+               LIMIT 1
+            ) pendiente ON true
+      WHERE i."cursoId" = :cursoId
+      GROUP BY pendiente.id`,
+    { replacements: { cursoId }, type: QueryTypes.SELECT },
+  );
 
 /**
  * Métricas de avance y cuestionarios por cada lección de un curso.

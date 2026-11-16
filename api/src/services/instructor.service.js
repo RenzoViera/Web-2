@@ -12,20 +12,54 @@ export const obtenerResumenGlobal = async (instructorId) => {
 };
 
 /**
+ * @param {number} parte
+ * @param {number} total
+ */
+const porcentaje = (parte, total) => (total > 0 ? Math.round((parte / total) * 100) : 0);
+
+/**
  * Métricas detalladas y avance por lección de un curso del instructor.
+ * Por lección: `llegaron` (la tienen desbloqueada: completaron todas las anteriores) y `detenidos` (es su primera
+ * lección sin completar). `llegaron` se deriva en memoria de `detenidos` (REGLAS B.24): a la lección N llegan todos los
+ * inscritos menos los detenidos en las lecciones anteriores. `mayorCaida` es la lección con más detenidos.
  * @param {any} curso Curso validado como propio por isCourseOwner.
  */
 export const obtenerCursoResumen = async (curso) => {
-  const metricas = await instructorRepo.getCursoMetricas(curso.id);
-  const leccionesRaw = await instructorRepo.getCursoLeccionesMetricas(curso.id);
+  const [conteos, leccionesRaw, detenidosRows] = await Promise.all([
+    instructorRepo.getCursoConteos(curso.id),
+    instructorRepo.getCursoLeccionesMetricas(curso.id),
+    instructorRepo.getDetenidosPorLeccion(curso.id),
+  ]);
+  const { totalInscritos, totalCompletados, totalProgresos, notaPromedio } = conteos;
+  const totalLecciones = leccionesRaw.length;
+  const detenidosMap = new Map(detenidosRows.map((row) => [row.leccionId, row.detenidos]));
 
-  const lecciones = leccionesRaw.map((leccion) => ({
-    ...leccion,
-    tasaCompletitud:
-      metricas.totalInscritos > 0
-        ? Math.round((leccion.completados / metricas.totalInscritos) * 100)
-        : 0,
-  }));
+  let detenidosAntes = 0;
+  const lecciones = leccionesRaw.map((leccion) => {
+    const detenidos = detenidosMap.get(leccion.id) ?? 0;
+    const llegaron = totalInscritos - detenidosAntes;
+    detenidosAntes += detenidos;
+    return {
+      ...leccion,
+      tasaCompletitud: porcentaje(leccion.completados, totalInscritos),
+      llegaron,
+      detenidos,
+    };
+  });
+
+  const caida = lecciones.reduce(
+    (max, leccion) => (leccion.detenidos > (max?.detenidos ?? 0) ? leccion : max),
+    /** @type {(typeof lecciones)[number] | null} */ (null),
+  );
+
+  const metricas = {
+    totalInscritos,
+    totalCompletados,
+    tasaCompletitud: porcentaje(totalCompletados, totalInscritos),
+    promedioProgreso: porcentaje(totalProgresos, totalInscritos * totalLecciones),
+    notaPromedio,
+    totalLecciones,
+  };
 
   return {
     curso: {
@@ -41,6 +75,9 @@ export const obtenerCursoResumen = async (curso) => {
     },
     metricas,
     lecciones,
+    mayorCaida: caida
+      ? { leccionId: caida.id, titulo: caida.titulo, orden: caida.orden, estudiantes: caida.detenidos }
+      : null,
   };
 };
 
