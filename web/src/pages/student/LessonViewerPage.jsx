@@ -130,7 +130,7 @@ export default function LessonViewerPage() {
           )}
 
           {!leccionLoading && leccionApiError?.code === 'LESSON_LOCKED' && (
-            <Card className="flex flex-col items-center gap-4 p-8 text-center">
+            <Card padding="none" className="flex flex-col items-center gap-4 p-8 text-center">
               <div className="grid size-14 place-items-center rounded-full bg-surface-muted text-fg-muted">
                 <LockIcon className="size-7" />
               </div>
@@ -160,7 +160,7 @@ export default function LessonViewerPage() {
 
           {!leccionLoading && !leccionError && !mismatchCurso && leccion && (
             <div className="flex flex-col gap-6">
-              <Card as="article" className="flex flex-col gap-6 p-5 sm:p-8">
+              <Card as="article" padding="none" className="flex flex-col gap-6 p-5 sm:p-8">
                 <header className="flex flex-col gap-3 border-b border-border pb-5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-medium tracking-wide text-fg-subtle uppercase">
